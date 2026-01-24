@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Redirect root to enterprise dashboard
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/enterprise',
+        permanent: true,
+      },
+    ];
+  },
   // Rewrite API calls to backend server
   async rewrites() {
     // Use 127.0.0.1 instead of localhost to avoid IPv6 issues on Windows
@@ -13,10 +23,10 @@ const nextConfig = {
       ],
     };
   },
-  
+
   // Enable React strict mode for better debugging
   reactStrictMode: true,
-  
+
   // Optimize images
   images: {
     unoptimized: true,
