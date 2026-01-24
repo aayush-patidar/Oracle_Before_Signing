@@ -38,6 +38,30 @@ npm run dev         # Start all services
 npm run health      # Verify everything is running
 ```
 
+## 🌐 Deploy to Monad Testnet
+
+OBS is now ready to deploy to **Monad**, a high-performance EVM-compatible blockchain!
+
+### Quick Deploy
+```bash
+# 1. Compile contracts
+npm run chain:compile
+
+# 2. Deploy to Monad testnet
+npm run monad:deploy
+```
+
+### 📚 Deployment Guides
+- **Quick Start**: See [MONAD_QUICKSTART.md](./MONAD_QUICKSTART.md)
+- **Full Guide**: See [MONAD_DEPLOYMENT.md](./MONAD_DEPLOYMENT.md)
+- **Setup Summary**: See [MONAD_SETUP_COMPLETE.md](./MONAD_SETUP_COMPLETE.md)
+
+### Monad Network Details
+- **Chain ID**: 10143
+- **RPC**: https://testnet-rpc.monad.xyz/
+- **Explorer**: http://testnet.monadexplorer.com/
+
+
 ## 🏗️ Architecture
 
 ```

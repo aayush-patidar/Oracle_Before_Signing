@@ -3,6 +3,7 @@ import { IntentService } from './intent';
 import { SimulationService } from './simulate';
 import { AnalysisService } from './analyze';
 import { JudgmentService } from './judge';
+import { Queries } from '../db';
 
 export interface Run {
   id: string;
@@ -108,6 +109,26 @@ export class RunManager {
 
       run.result = finalResult;
       this.emit(runId, finalResult);
+
+      // Save transaction to database for Dashboard visibility
+      try {
+        const status = judgment.judgment === 'ALLOW' ? 'ALLOWED' :
+          (judgment.override_allowed ? 'PENDING' : 'DENIED');
+
+        await Queries.addTransaction({
+          intent_id: runId,
+          from_address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', // User wallet
+          to_address: simulationResult.txRequest.to,
+          function_name: 'approve',
+          status: status,
+          createdAt: new Date().toISOString(), // Use createdAt (standard)
+          created_at: new Date().toISOString(), // Keep created_at for legacy compat
+          severity: judgment.judgment === 'DENY' ? 'HIGH' : (judgment.override_allowed ? 'MEDIUM' : 'LOW')
+        });
+        console.log('✅ Transaction saved to dashboard');
+      } catch (dbError) {
+        console.error('Failed to save transaction to DB:', dbError);
+      }
 
     } catch (error) {
       console.error('Run processing error:', error);

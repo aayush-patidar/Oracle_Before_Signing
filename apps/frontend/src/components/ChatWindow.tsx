@@ -244,7 +244,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
                       {message.type === 'user' ? 'You' : 'System Oracle'}
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-sm leading-relaxed break-all">{message.content}</p>
                 </>
               )}
             </div>

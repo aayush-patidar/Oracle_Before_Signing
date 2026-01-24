@@ -1,7 +1,4 @@
 import { ethers } from 'ethers';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 export interface X402Config {
     payTo: string;
@@ -11,12 +8,21 @@ export interface X402Config {
 }
 
 export const getX402Config = (): X402Config => {
-    return {
+    const config = {
         payTo: process.env.X402_PAY_TO || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         priceWei: process.env.X402_PRICE_WEI || '100000000000000',
         chainId: parseInt(process.env.X402_CHAIN_ID || '31337', 10),
         rpcUrl: process.env.RPC_URL || 'http://127.0.0.1:8545',
     };
+
+    console.log('🔧 x402 Config:', {
+        payTo: config.payTo,
+        chainId: config.chainId,
+        rpcUrl: config.rpcUrl,
+        priceWei: config.priceWei
+    });
+
+    return config;
 };
 
 export async function verifyPaymentTx(txHash: string): Promise<{ ok: boolean; payer?: string; amountWei?: string; reason?: string }> {
@@ -24,14 +30,25 @@ export async function verifyPaymentTx(txHash: string): Promise<{ ok: boolean; pa
         const config = getX402Config();
         const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
-        const tx = await provider.getTransaction(txHash);
+        // Retry fetching TX a few times to handle RPC indexing delays
+        let tx = null;
+        for (let i = 0; i < 5; i++) {
+            tx = await provider.getTransaction(txHash);
+            if (tx) break;
+            await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+        }
 
         if (!tx) {
             return { ok: false, reason: 'TX_NOT_FOUND' };
         }
 
-        // Check if TX is confirmed (optional but recommended for non-local)
-        // For local dev, we might accept unconfirmed or just wait a bit
+        // For demo speed, we skip waiting for full confirmation if we see it in mempool
+        // This makes the UI feel instant
+        /* 
+        try {
+            await provider.waitForTransaction(txHash, 1, 5000); 
+        } catch (e) {} 
+        */
         // Let's check status if mined
         const receipt = await provider.getTransactionReceipt(txHash);
         if (receipt && receipt.status === 0) {

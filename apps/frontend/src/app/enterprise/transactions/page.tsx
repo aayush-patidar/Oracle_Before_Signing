@@ -151,7 +151,7 @@ export default function TransactionsPage() {
                         {tx.function_name || 'N/A'}
                       </TableCell>
                       <TableCell className="text-gray-400 text-sm">
-                        {new Date(tx.created_at).toLocaleString()}
+                        {new Date(tx.created_at || (tx as any).createdAt).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <Button

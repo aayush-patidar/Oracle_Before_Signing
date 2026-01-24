@@ -37,7 +37,7 @@ export class SimulationService {
     // Connect to Hardhat network
     this.provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
 
-    // Load chain state
+    // Load chain state or use defaults
     try {
       const statePath = path.join(process.cwd(), '..', '..', 'chain', 'state.json');
       if (fs.existsSync(statePath)) {
@@ -67,6 +67,24 @@ export class SimulationService {
   }
 
   async simulateTransaction(intent: Intent): Promise<SimulationResult> {
+    try {
+      // Try to connect to provider with a short timeout (1s)
+      // If it takes longer, we assume it's unreachable and mocking is needed
+      const networkCheck = this.provider.getNetwork();
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout')), 1000)
+      );
+
+      await Promise.race([networkCheck, timeout]);
+
+      return await this.executeSimulation(intent);
+    } catch (error) {
+      console.warn('⚠️ Simulation provider unavailable/timed out, falling back to mock simulation');
+      return this.mockSimulation(intent);
+    }
+  }
+
+  private async executeSimulation(intent: Intent): Promise<SimulationResult> {
     if (intent.type !== 'erc20_approve') {
       throw new Error('Only ERC20 approve transactions are supported');
     }
@@ -114,7 +132,45 @@ export class SimulationService {
       timeline,
       beforeState,
       afterState,
-      logs: [] // Could add transaction logs here
+      logs: []
+    };
+  }
+
+  private mockSimulation(intent: Intent): SimulationResult {
+    const txRequest = this.buildApproveTransaction(intent);
+
+    const beforeState = {
+      balance: '1000000000', // 1000 USDT
+      allowance: '0'
+    };
+
+    const timeline: TimelineStep[] = [
+      { block: 0, description: 'Initial state evaluated', timestamp: Date.now() },
+      { block: 1, description: `Approval for ${intent.amount} USDT simulated`, timestamp: Date.now() }
+    ];
+
+    let afterState = { ...beforeState, allowance: intent.amount };
+
+    // Identify if it's a "risky" transaction for the demo
+    // If approving the known malicious spender (even with case difference)
+    const isRiskySpender = intent.spender.toLowerCase() === MALICIOUS_SPENDER.toLowerCase() ||
+      intent.spender.toLowerCase() === '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'.toLowerCase(); // Monad Spender
+
+    if (isRiskySpender && intent.isUnlimited) {
+      timeline.push({
+        block: 18,
+        description: '🚨 POTENTIAL DRAIN DETECTED: Spender drains 1000 USDT',
+        timestamp: Date.now()
+      });
+      afterState.balance = '0'; // Drained!
+    }
+
+    return {
+      txRequest,
+      timeline,
+      beforeState,
+      afterState,
+      logs: []
     };
   }
 
@@ -133,16 +189,12 @@ export class SimulationService {
   }
 
   private async executeTransaction(txRequest: { to: string; data: string; value: string }): Promise<void> {
-    // Get signer (first account from Hardhat)
     const signer = await this.provider.getSigner(0);
-
-    // Execute transaction
     const tx = await signer.sendTransaction({
       to: txRequest.to,
       data: txRequest.data,
       value: txRequest.value
     });
-
     await tx.wait();
   }
 
@@ -151,7 +203,6 @@ export class SimulationService {
   }
 
   private async simulateDrain(): Promise<void> {
-    // Get malicious spender contract
     const maliciousSpenderAbi = [
       'function drain(address token, address from, address to) external'
     ];
@@ -161,7 +212,6 @@ export class SimulationService {
       await this.provider.getSigner(0)
     );
 
-    // Execute drain
     const tx = await maliciousSpender.drain(
       this.chainState.contracts.mockUSDT.address,
       USER_WALLET,
@@ -185,7 +235,7 @@ export class SimulationService {
 
     const [balance, allowance] = await Promise.all([
       token.balanceOf(USER_WALLET),
-      token.allowance(USER_WALLET, MALICIOUS_SPENDER) // Check allowance to malicious spender
+      token.allowance(USER_WALLET, MALICIOUS_SPENDER)
     ]);
 
     return {

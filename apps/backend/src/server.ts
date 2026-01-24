@@ -1,7 +1,17 @@
+// Load environment variables FIRST before any other imports
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
+
+// Log loaded environment variables for debugging
+console.log('🔧 Environment Variables Loaded:');
+console.log('  X402_PAY_TO:', process.env.X402_PAY_TO || 'NOT SET');
+console.log('  X402_CHAIN_ID:', process.env.X402_CHAIN_ID || 'NOT SET');
+console.log('  RPC_URL:', process.env.RPC_URL || 'NOT SET');
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import * as fs from 'fs';
-import * as path from 'path';
 import { chatRoutes } from './routes/chat';
 import { streamRoutes } from './routes/stream';
 import { enterpriseRoutes } from './routes/enterprise';

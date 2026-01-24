@@ -56,6 +56,7 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
     if (!id) return 'localhost';
     const normalized = id.toString().toLowerCase();
     if (normalized === '0x7a69' || normalized === '31337') return 'localhost';
+    if (normalized === '0x279f' || normalized === '10143') return 'monad';
     if (normalized === '0xaa36a7' || normalized === '11155111') return 'sepolia';
     if (normalized === '0x1' || normalized === '1') return 'mainnet';
     return 'localhost'; // Fallback to localhost display
@@ -217,7 +218,11 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${chainIdToName(chainId) === 'localhost' ? 'bg-blue-400' : 'bg-green-400'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${chainIdToName(chainId) === 'localhost' ? 'bg-blue-400' :
+                        chainIdToName(chainId) === 'monad' ? 'bg-purple-400' :
+                          chainIdToName(chainId) === 'sepolia' ? 'bg-yellow-400' :
+                            'bg-green-400'
+                      }`} />
                     <span className="capitalize">{chainIdToName(chainId)}</span>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
@@ -237,6 +242,16 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
                   >
                     <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
                     Localhost (Hardhat)
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors flex items-center gap-2"
+                    onClick={() => {
+                      switchNetwork('monad');
+                      document.getElementById('network-dropdown')?.classList.add('hidden');
+                    }}
+                  >
+                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                    Monad Testnet
                   </button>
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors flex items-center gap-2"

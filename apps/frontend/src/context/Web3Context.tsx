@@ -167,12 +167,19 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     const switchNetwork = async (networkName: string) => {
         if (!window.ethereum) return;
 
-        const networks: Record<string, { chainId: string; rpcUrls: string[]; chainName: string; nativeCurrency: any }> = {
+        const networks: Record<string, { chainId: string; rpcUrls: string[]; chainName: string; nativeCurrency: any; blockExplorerUrls?: string[] }> = {
             'localhost': {
                 chainId: '0x7A69', // 31337
                 chainName: 'Localhost 8545',
                 rpcUrls: ['http://127.0.0.1:8545'],
                 nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }
+            },
+            'monad': {
+                chainId: '0x279F', // 10143
+                chainName: 'Monad Testnet',
+                rpcUrls: ['https://testnet-rpc.monad.xyz/'],
+                nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
+                blockExplorerUrls: ['http://testnet.monadexplorer.com/']
             },
             'sepolia': {
                 chainId: '0xaa36a7', // 11155111

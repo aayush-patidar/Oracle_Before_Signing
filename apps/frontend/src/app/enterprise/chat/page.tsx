@@ -6,7 +6,7 @@ import JudgmentBanner from '@/components/JudgmentBanner';
 import FutureTimeline from '@/components/FutureTimeline';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Brain, Activity, Clock } from 'lucide-react';
+import { Shield, Brain, Activity, Clock, RefreshCw } from 'lucide-react';
 
 export default function ChatPage() {
     const [currentRun, setCurrentRun] = useState<any>(null);
@@ -95,7 +95,7 @@ export default function ChatPage() {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <FutureTimeline stages={stages} />
+                                        <FutureTimeline stages={finalResult?.timeline || []} />
                                     </CardContent>
                                 </Card>
 
