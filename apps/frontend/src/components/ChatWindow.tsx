@@ -51,6 +51,11 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           // Add system message for stage updates
           if (stage.message) {
             addMessage('system', stage.message);
+          } else if (stage.error) {
+            onStreamUpdate(stage); // Notify parent
+            addMessage('system', `❌ Error: ${stage.error}`);
+            setIsLoading(false);
+            eventSource.close();
           }
 
           if (stage.stage === 'final') {
@@ -64,7 +69,9 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
 
       eventSource.onerror = (error) => {
         console.error('SSE error:', error);
+        onStreamUpdate({ error: 'Connection to Oracle lost. Please try again.' });
         eventSource.close();
+        setIsLoading(false);
       };
 
       return () => {

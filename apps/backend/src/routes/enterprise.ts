@@ -319,8 +319,18 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
       const alerts = await Queries.getAlerts(limit);
       return reply.send(alerts);
     } catch (error) {
-      fastify.log.error(error);
       return reply.status(500).send({ error: 'Failed to fetch alerts' });
+    }
+  });
+
+  fastify.patch<{ Params: { id: string }; Body: { acknowledged: boolean } }>('/api/alerts/:id', async (request, reply) => {
+    try {
+      const { acknowledged } = request.body;
+      const updated = await Queries.updateAlert(request.params.id, { acknowledged });
+      return reply.send(updated);
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Failed to update alert' });
     }
   });
 

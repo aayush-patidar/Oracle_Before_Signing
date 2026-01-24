@@ -6,21 +6,27 @@ import JudgmentBanner from '@/components/JudgmentBanner';
 import FutureTimeline from '@/components/FutureTimeline';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Brain, Activity, Clock, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Shield, Brain, Activity, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 
 export default function ChatPage() {
     const [currentRun, setCurrentRun] = useState<any>(null);
     const [stages, setStages] = useState<any[]>([]);
     const [finalResult, setFinalResult] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleNewRun = (runData: any) => {
         setCurrentRun(runData);
         setStages([]);
         setFinalResult(null);
+        setError(null);
     };
 
     const handleStreamUpdate = (stage: any) => {
         setStages((prev) => [...prev, stage]);
+        if (stage.error) {
+            setError(stage.error);
+        }
         if (stage.stage === 'final') {
             setFinalResult(stage);
         }
@@ -56,6 +62,20 @@ export default function ChatPage() {
                                 Start a chat with NoahAI to see real-time blockchain simulation, reality deltas, and adversarial risk judgments here.
                             </p>
                         </div>
+                    ) : error ? (
+                        <Card className="bg-red-950/50 border-red-900 shadow-xl">
+                            <CardContent className="p-12 flex flex-col items-center justify-center text-center">
+                                <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
+                                <h2 className="text-2xl font-bold text-red-400 mb-2">Analysis Failed</h2>
+                                <p className="text-red-200 max-w-md">{error}</p>
+                                <Button
+                                    onClick={() => handleNewRun(null)}
+                                    className="mt-6 bg-red-900/50 hover:bg-red-800 text-red-200 border border-red-800"
+                                >
+                                    Reset
+                                </Button>
+                            </CardContent>
+                        </Card>
                     ) : (
                         <>
                             {/* Status Header */}
@@ -79,8 +99,12 @@ export default function ChatPage() {
 
                             {/* Judgment Section */}
                             {finalResult?.judgment && (
-                                <JudgmentBanner judgment={finalResult.judgment} />
+                                <JudgmentBanner
+                                    judgment={finalResult.judgment}
+                                    onOverride={() => console.log('Override requested')}
+                                />
                             )}
+
 
                             {/* Timeline & Delta Section */}
                             <div className="grid grid-cols-2 gap-6">

@@ -23,7 +23,7 @@ export const isDatabaseReady = () => {
   return useMock || mongoose.connection.readyState === 1;
 };
 
-export const initializeDatabase = async (retries = 2) => {
+export const initializeDatabase = async (retries = 2): Promise<void> => {
   try {
     const state = mongoose.connection.readyState;
     if (state === 0) {
@@ -149,6 +149,14 @@ export const Queries = {
       return newA;
     }
     return await Models.Alert.create(a);
+  },
+  updateAlert: async (id: string, updates: any) => {
+    if (useMock) {
+      const alert = mockStore.alerts.find((a: any) => a._id === id || a.id === id);
+      if (alert) { Object.assign(alert, updates); }
+      return alert;
+    }
+    return await Models.Alert.findByIdAndUpdate(id, updates, { new: true });
   },
 
   getAuditLogs: async (l = 200) => useMock ? mockStore.auditLogs.slice(0, l) : await Models.AuditLog.find().sort({ createdAt: -1 }).limit(l),

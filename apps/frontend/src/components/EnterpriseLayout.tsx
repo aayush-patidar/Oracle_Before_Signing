@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import WalletConnect from '@/components/WalletConnect';
 import { useWeb3 } from '@/context/Web3Context';
 import { useRole } from '@/context/RoleContext';
+import { usePolicy } from '@/context/PolicyContext';
 import { toast } from 'sonner';
 import { apiCall } from '@/lib/api';
 
@@ -49,6 +50,7 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { chainId, switchNetwork } = useWeb3();
   const { role, permissions, setRole } = useRole();
+  const { policyMode } = usePolicy();
   const [isExporting, setIsExporting] = useState(false);
 
   // Helper to convert chainId to dropdown value
@@ -200,8 +202,13 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
         <header className="bg-gray-950 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-white">OBS Security Console</h1>
-            <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/30">
-              Monitor Mode
+            <Badge variant="outline" className={`
+              ${policyMode === 'ENFORCE'
+                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                : 'bg-green-500/20 text-green-400 border-green-500/30'
+              }
+            `}>
+              {policyMode === 'ENFORCE' ? 'Enforce Mode' : 'Monitor Mode'}
             </Badge>
           </div>
 
@@ -219,9 +226,9 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
                 >
                   <div className="flex items-center gap-2">
                     <div className={`w-1.5 h-1.5 rounded-full ${chainIdToName(chainId) === 'localhost' ? 'bg-blue-400' :
-                        chainIdToName(chainId) === 'monad' ? 'bg-purple-400' :
-                          chainIdToName(chainId) === 'sepolia' ? 'bg-yellow-400' :
-                            'bg-green-400'
+                      chainIdToName(chainId) === 'monad' ? 'bg-purple-400' :
+                        chainIdToName(chainId) === 'sepolia' ? 'bg-yellow-400' :
+                          'bg-green-400'
                       }`} />
                     <span className="capitalize">{chainIdToName(chainId)}</span>
                   </div>

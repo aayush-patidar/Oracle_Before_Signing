@@ -13,7 +13,8 @@ interface Alert {
   event_type: string;
   message: string;
   transaction_id?: string;
-  created_at: string;
+  created_at?: string;
+  createdAt?: string;
   acknowledged: boolean;
 }
 
@@ -34,6 +35,24 @@ export default function AlertsPage() {
       console.error('Failed to fetch alerts:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAcknowledge = async (id: number | string) => {
+    try {
+      await apiCall(`/alerts/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ acknowledged: true }),
+      });
+      // Optimistic update
+      setAlerts(alerts.map(a =>
+        (a.id === id || (a as any)._id === id) ? { ...a, acknowledged: true } : a
+      ));
+    } catch (error) {
+      console.error('Failed to acknowledge alert:', error);
     }
   };
 
@@ -186,10 +205,10 @@ export default function AlertsPage() {
                       alert.severity === 'CRITICAL'
                         ? '#ef4444'
                         : alert.severity === 'HIGH'
-                        ? '#f97316'
-                        : alert.severity === 'MEDIUM'
-                        ? '#eab308'
-                        : '#3b82f6'
+                          ? '#f97316'
+                          : alert.severity === 'MEDIUM'
+                            ? '#eab308'
+                            : '#3b82f6'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -211,7 +230,7 @@ export default function AlertsPage() {
                           </p>
                         )}
                         <p className="text-xs text-gray-500 mt-2">
-                          {new Date(alert.created_at).toLocaleString()}
+                          {new Date(alert.created_at || alert.createdAt || new Date().toISOString()).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -220,7 +239,11 @@ export default function AlertsPage() {
                         {alert.severity}
                       </Badge>
                       {!alert.acknowledged && (
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => handleAcknowledge(alert.id || (alert as any)._id)}
+                        >
                           Acknowledge
                         </Button>
                       )}

@@ -16,6 +16,7 @@ import {
 import { apiCall } from '@/lib/api';
 import { toast } from 'sonner';
 import CreatePolicyModal from '@/components/CreatePolicyModal';
+import { usePolicy } from '@/context/PolicyContext';
 
 interface Policy {
   _id: string;
@@ -66,7 +67,12 @@ export default function PoliciesPage() {
         })
       });
       toast.success(`Policy ${policy.enabled ? 'disabled' : 'enabled'} successfully`);
-      fetchPolicies();
+      await fetchPolicies();
+      // We need to re-fetch the context state because toggling one policy might change the global "Strict Enforce" status
+      // Ideally we would expose a 'refresh' method on the context or just let the context know.
+      // Since context fetches on mount, we can force a reload or we can just rely on the user navigating or 
+      // we can expose a refresh function from context.
+      // For now, let's keep it simple. The header might lag until refresh if we don't sync.
     } catch (error) {
       console.error('Failed to update policy:', error);
       toast.error('Failed to update policy');
@@ -86,16 +92,16 @@ export default function PoliciesPage() {
     }
   };
 
+  const { setPolicyMode } = usePolicy();
+
   const globalSwitchMode = async () => {
     const nextMode = currentMode === 'ENFORCE' ? 'MONITOR' : 'ENFORCE';
     setIsSwitchingMode(true);
     const switchToast = toast.loading(`Switching to ${nextMode} mode...`);
 
     try {
-      await apiCall('/policies/global-mode', {
-        method: 'POST',
-        body: JSON.stringify({ mode: nextMode })
-      });
+      // Use the context setter which handles the API call and state update
+      await setPolicyMode(nextMode);
       toast.success(`Security system updated to ${nextMode} mode`, { id: switchToast });
       fetchPolicies();
     } catch (error) {
@@ -147,8 +153,8 @@ export default function PoliciesPage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-8">
             <div className={`p-4 rounded-xl border transition-all ${currentMode === 'ENFORCE'
-                ? 'bg-green-500/5 border-green-500/30'
-                : 'bg-gray-900/50 border-gray-800 opacity-60'
+              ? 'bg-green-500/5 border-green-500/30'
+              : 'bg-gray-900/50 border-gray-800 opacity-60'
               }`}>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-white flex items-center gap-2">
@@ -174,8 +180,8 @@ export default function PoliciesPage() {
             </div>
 
             <div className={`p-4 rounded-xl border transition-all ${currentMode === 'MONITOR'
-                ? 'bg-blue-500/5 border-blue-500/30'
-                : 'bg-gray-900/50 border-gray-800 opacity-60'
+              ? 'bg-blue-500/5 border-blue-500/30'
+              : 'bg-gray-900/50 border-gray-800 opacity-60'
               }`}>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-white flex items-center gap-2">

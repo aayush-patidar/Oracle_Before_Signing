@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Shield, Users, Bell, Database, Server, Cpu } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRole, Role } from '@/context/RoleContext';
+import { usePolicy } from '@/context/PolicyContext';
 import { toast } from 'sonner';
 import { apiCall } from '@/lib/api';
 import {
@@ -18,10 +19,15 @@ import {
 
 export default function SettingsPage() {
   const { role: currentRole, setRole } = useRole();
+  const { policyMode: globalMode, setPolicyMode: setGlobalMode } = usePolicy();
   const [selectedRole, setSelectedRole] = useState<Role>(currentRole);
-  const [policyMode, setPolicyMode] = useState('ENFORCE');
+  const [policyMode, setPolicyMode] = useState(globalMode);
   const [alertSeverity, setAlertSeverity] = useState('HIGH');
   const [isUpdatingPolicy, setIsUpdatingPolicy] = useState(false);
+
+  useEffect(() => {
+    setPolicyMode(globalMode);
+  }, [globalMode]);
 
   const roles = [
     {
@@ -59,10 +65,7 @@ export default function SettingsPage() {
     setIsUpdatingPolicy(true);
     const updateToast = toast.loading('Updating security policy mode...');
     try {
-      await apiCall('/policies/global-mode', {
-        method: 'POST',
-        body: JSON.stringify({ mode: policyMode })
-      });
+      await setGlobalMode(policyMode);
       toast.success(`All policies updated to ${policyMode} mode`, { id: updateToast });
     } catch (error) {
       console.error('Failed to update policy mode:', error);
@@ -102,8 +105,8 @@ export default function SettingsPage() {
                   key={r.value}
                   onClick={() => setSelectedRole(r.value)}
                   className={`flex items-start gap-4 p-4 border rounded-xl cursor-pointer transition-all duration-200 ${selectedRole === r.value
-                      ? 'bg-blue-600/10 border-blue-500 ring-1 ring-blue-500'
-                      : 'bg-gray-900/50 border-gray-700 hover:bg-gray-800'
+                    ? 'bg-blue-600/10 border-blue-500 ring-1 ring-blue-500'
+                    : 'bg-gray-900/50 border-gray-700 hover:bg-gray-800'
                     }`}
                 >
                   <div className="pt-1">
