@@ -76,13 +76,17 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Initialize JSON-RPC provider (memoized to prevent re-renders)
-  const provider = useMemo(() => new ethers.JsonRpcProvider('http://127.0.0.1:8545'), []);
+  const provider = useMemo(() => {
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'http://127.0.0.1:8545';
+    return new ethers.JsonRpcProvider(rpcUrl);
+  }, []);
 
   const fetchChainState = useCallback(async () => {
     try {
-      const response = await fetch('/api/chain-state');
+      // Fetch directly from public folder (standard fix for Vercel)
+      const response = await fetch('/state.json');
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        throw new Error(`Config not found: ${response.status}`);
       }
       const data = await response.json();
       setChainState(data);

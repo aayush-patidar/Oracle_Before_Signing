@@ -1,0 +1,25 @@
+{
+    "network": {
+        "name": "Monad Testnet",
+        "chainId": 10143,
+        "rpcUrl": "https://testnet-rpc.monad.xyz/",
+        "explorer": "http://testnet.monadexplorer.com/"
+    },
+    "contracts": {
+        "mockUSDT": {
+            "address": "0xf187ba9BdF5aE32D7F75A537CE7399D0855410C6",
+            "symbol": "USDT",
+            "decimals": 6,
+            "explorerUrl": "http://testnet.monadexplorer.com/address/0xf187ba9BdF5aE32D7F75A537CE7399D0855410C6"
+        },
+        "maliciousSpender": {
+            "address": "0x1F95a95810FB99bb2781545b89E2791AD87DfAFb",
+            "explorerUrl": "http://testnet.monadexplorer.com/address/0x1F95a95810FB99bb2781545b89E2791AD87DfAFb"
+        }
+    },
+    "deployer": {
+        "address": "0x598a82A1e968D29A2666847C39bCa5adf5640684",
+        "initialBalance": "20.0"
+    },
+    "deploymentTime": "2026-01-24T16:42:18.908Z"
+}
