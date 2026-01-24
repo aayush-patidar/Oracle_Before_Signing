@@ -34,33 +34,38 @@ export default function FutureTimeline({ stages = [] }: FutureTimelineProps) {
         <div className="absolute left-6 top-4 bottom-4 w-px bg-gray-800" />
 
         <div className="space-y-6 p-6">
-          {timelineData.map((step, index) => (
-            <div key={index} className="relative flex items-start gap-4">
-              {/* Timeline dot */}
-              <div className={`relative z-10 w-3 h-3 mt-1.5 rounded-full border-2 ${step.description.toLowerCase().includes('drain') || step.description.toLowerCase().includes('risk')
+          {timelineData.map((step: any, index) => {
+            const desc = (step.description || step.event || '').toLowerCase();
+            const isRisk = desc.includes('drain') || desc.includes('risk') || step.status === 'critical' || step.status === 'danger';
+
+            return (
+              <div key={index} className="relative flex items-start gap-4">
+                {/* Timeline dot */}
+                <div className={`relative z-10 w-3 h-3 mt-1.5 rounded-full border-2 ${isRisk
                   ? 'bg-gray-900 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
                   : 'bg-gray-900 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]'
-                }`} />
+                  }`} />
 
-              <div className="flex-1 min-w-0 bg-gray-800/40 rounded-lg p-3 border border-gray-700/50 hover:bg-gray-800/60 transition-colors">
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${step.block === 0 ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-700 text-gray-400'
-                    }`}>
-                    Block +{step.block}
-                  </span>
-                  {step.description.toLowerCase().includes('drain') && (
-                    <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">
-                      RISK DETECTED
+                <div className="flex-1 min-w-0 bg-gray-800/40 rounded-lg p-3 border border-gray-700/50 hover:bg-gray-800/60 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${step.block === 0 || step.time === 'T+0s' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-700 text-gray-400'
+                      }`}>
+                      {step.time || `Block +${step.block || 0}`}
                     </span>
-                  )}
-                </div>
+                    {isRisk && (
+                      <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">
+                        RISK DETECTED
+                      </span>
+                    )}
+                  </div>
 
-                <p className="text-sm text-gray-200 leading-relaxed font-light">
-                  {step.description}
-                </p>
+                  <p className="text-sm text-gray-200 leading-relaxed font-light">
+                    {step.description || step.event || 'Unknown Event'}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

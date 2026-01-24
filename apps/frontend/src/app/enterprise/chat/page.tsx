@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ChatWindow from '@/components/ChatWindow';
 import JudgmentBanner from '@/components/JudgmentBanner';
 import FutureTimeline from '@/components/FutureTimeline';
@@ -14,29 +14,35 @@ export default function ChatPage() {
     const [stages, setStages] = useState<any[]>([]);
     const [finalResult, setFinalResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [currentStage, setCurrentStage] = useState<string>('');
 
-    const handleNewRun = (runData: any) => {
+    const handleNewRun = useCallback((runData: any) => {
         setCurrentRun(runData);
         setStages([]);
         setFinalResult(null);
         setError(null);
-    };
+        setCurrentStage('');
+    }, []);
 
-    const handleStreamUpdate = (stage: any) => {
+    const handleStreamUpdate = useCallback((stage: any) => {
         setStages((prev) => [...prev, stage]);
+        if (stage.message) {
+            setCurrentStage(stage.message);
+        }
         if (stage.error) {
             setError(stage.error);
         }
         if (stage.stage === 'final') {
             setFinalResult(stage);
+            setCurrentStage('Analysis Complete');
         }
-    };
+    }, []);
 
     return (
-        <div className="p-8 h-[calc(100vh-80px)] overflow-hidden">
-            <div className="grid grid-cols-12 gap-8 h-full">
+        <div className="p-4 md:p-8 min-h-screen overflow-y-auto flex flex-col bg-gray-900">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
                 {/* Chat Column */}
-                <div className="col-span-4 h-full flex flex-col">
+                <div className="lg:col-span-4 flex flex-col h-[600px] lg:h-full">
                     <div className="mb-6">
                         <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
                             <Brain className="w-8 h-8 text-blue-500" />
@@ -53,7 +59,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Simulation & Judgment Column */}
-                <div className="col-span-8 flex flex-col gap-6 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-800">
+                <div className="lg:col-span-8 flex flex-col gap-6 overflow-y-visible lg:overflow-y-auto pr-0 lg:pr-2 pb-8 scrollbar-thin scrollbar-thumb-gray-800">
                     {!currentRun ? (
                         <div className="flex-1 border-2 border-dashed border-gray-800 rounded-2xl flex flex-col items-center justify-center text-center p-12 opacity-50">
                             <Shield className="w-16 h-16 text-gray-700 mb-4" />
@@ -88,6 +94,7 @@ export default function ChatPage() {
                                         <div>
                                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Analysis</p>
                                             <h3 className="text-white font-mono text-xs">{currentRun.runId}</h3>
+                                            {currentStage && <p className="text-[10px] text-blue-400 mt-1">{currentStage}</p>}
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -107,7 +114,7 @@ export default function ChatPage() {
 
 
                             {/* Timeline & Delta Section */}
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                 <Card className="bg-gray-900 border-gray-800 shadow-inner min-h-[400px]">
                                     <CardHeader className="border-b border-gray-800 bg-gray-900/50">
                                         <div className="flex items-center justify-between">

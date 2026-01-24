@@ -1,20 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getTransactions, getAlerts } from '@/lib/demo-store';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
+    const txs = getTransactions();
+    const alerts = getAlerts();
+
+    const critical = alerts.filter((a: any) => a.severity === 'CRITICAL').length;
+    const high = alerts.filter((a: any) => a.severity === 'HIGH').length;
+
     res.status(200).json({
-        totalTransactions: 12,
-        pendingTransactions: 2,
-        allowedTransactions: 8,
-        deniedTransactions: 2,
-        criticalAlerts: 1,
-        highAlerts: 3,
-        recentAlerts: [
-            {
-                event_type: 'MONITOR_MODE_VIOLATION',
-                severity: 'HIGH',
-                message: 'Transaction flagged by policies but allowed in Monitor Mode.',
-                created_at: new Date().toISOString()
-            }
-        ]
+        totalTransactions: txs.length,
+        pendingTransactions: txs.filter((t: any) => t.status === 'PENDING').length,
+        allowedTransactions: txs.filter((t: any) => t.status === 'ALLOWED').length,
+        deniedTransactions: txs.filter((t: any) => t.status === 'DENIED').length,
+        criticalAlerts: critical,
+        highAlerts: high,
+        recentAlerts: alerts.slice(0, 5)
     });
 }

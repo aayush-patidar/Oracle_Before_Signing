@@ -92,10 +92,9 @@ export default function PoliciesPage() {
     }
   };
 
-  const { setPolicyMode } = usePolicy();
+  const { setPolicyMode, policyMode } = usePolicy();
 
-  const globalSwitchMode = async () => {
-    const nextMode = currentMode === 'ENFORCE' ? 'MONITOR' : 'ENFORCE';
+  const globalSwitchMode = async (nextMode: string) => {
     setIsSwitchingMode(true);
     const switchToast = toast.loading(`Switching to ${nextMode} mode...`);
 
@@ -152,7 +151,7 @@ export default function PoliciesPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-8">
-            <div className={`p-4 rounded-xl border transition-all ${currentMode === 'ENFORCE'
+            <div className={`p-4 rounded-xl border transition-all ${policyMode === 'ENFORCE'
               ? 'bg-green-500/5 border-green-500/30'
               : 'bg-gray-900/50 border-gray-800 opacity-60'
               }`}>
@@ -161,15 +160,15 @@ export default function PoliciesPage() {
                   <Shield className="w-4 h-4 text-green-400" />
                   Enforce Mode
                 </h3>
-                {currentMode === 'ENFORCE' && (
+                {policyMode === 'ENFORCE' && (
                   <Badge className="bg-green-500 text-white px-2 py-0 text-[10px]">ACTIVE</Badge>
                 )}
               </div>
               <p className="text-xs text-gray-400">Transactions that violate any active policy will be blocked immediately.</p>
-              {currentMode === 'MONITOR' && (
+              {policyMode === 'MONITOR' && (
                 <Button
                   size="sm"
-                  onClick={globalSwitchMode}
+                  onClick={() => globalSwitchMode('ENFORCE')}
                   disabled={isSwitchingMode}
                   className="mt-4 w-full bg-gray-700 hover:bg-gray-600 h-8 text-xs gap-2"
                 >
@@ -179,7 +178,7 @@ export default function PoliciesPage() {
               )}
             </div>
 
-            <div className={`p-4 rounded-xl border transition-all ${currentMode === 'MONITOR'
+            <div className={`p-4 rounded-xl border transition-all ${policyMode === 'MONITOR'
               ? 'bg-blue-500/5 border-blue-500/30'
               : 'bg-gray-900/50 border-gray-800 opacity-60'
               }`}>
@@ -188,15 +187,15 @@ export default function PoliciesPage() {
                   <Info className="w-4 h-4 text-blue-400" />
                   Monitor Mode
                 </h3>
-                {currentMode === 'MONITOR' && (
+                {policyMode === 'MONITOR' && (
                   <Badge className="bg-blue-500 text-white px-2 py-0 text-[10px]">ACTIVE</Badge>
                 )}
               </div>
               <p className="text-xs text-gray-400">Transactions are cross-checked, and alerts are generated without blocking users.</p>
-              {currentMode === 'ENFORCE' && (
+              {policyMode === 'ENFORCE' && (
                 <Button
                   size="sm"
-                  onClick={globalSwitchMode}
+                  onClick={() => globalSwitchMode('MONITOR')}
                   disabled={isSwitchingMode}
                   className="mt-4 w-full bg-gray-700 hover:bg-gray-600 h-8 text-xs gap-2"
                 >

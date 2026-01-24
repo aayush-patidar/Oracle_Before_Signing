@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
+import { usePolicy } from '@/context/PolicyContext';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
 import { Shield, Wallet, CreditCard, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
@@ -27,60 +28,28 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
   const [isLoading, setIsLoading] = useState(false);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
+  const completedRunsRef = useRef<Set<string>>(new Set());
+  const isRunningRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const providerRef = useRef<ethers.BrowserProvider | null>(null);
 
   const { account, isConnected } = useWeb3();
+  const { policyMode } = usePolicy();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+  const isNearBottom = () => {
+    const container = messagesEndRef.current?.parentElement;
+    if (!container) return true;
+    const threshold = 100;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
 
-  useEffect(() => {
-    if (currentRunId) {
-      const eventSource = new EventSource(`/api/stream/${currentRunId}`);
-
-      eventSource.onmessage = (event) => {
-        try {
-          const stage = JSON.parse(event.data);
-          onStreamUpdate(stage);
-
-          // Add system message for stage updates
-          if (stage.message) {
-            addMessage('system', stage.message);
-          } else if (stage.error) {
-            onStreamUpdate(stage); // Notify parent
-            addMessage('system', `❌ Error: ${stage.error}`);
-            setIsLoading(false);
-            eventSource.close();
-          }
-
-          if (stage.stage === 'final') {
-            setIsLoading(false);
-            eventSource.close();
-          }
-        } catch (error) {
-          console.error('Error parsing SSE data:', error);
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('SSE error:', error);
-        onStreamUpdate({ error: 'Connection to Oracle lost. Please try again.' });
-        eventSource.close();
-        setIsLoading(false);
-      };
-
-      return () => {
-        eventSource.close();
-      };
-    }
-  }, [currentRunId, onStreamUpdate]);
-
-  const addMessage = (type: 'user' | 'system', content: string, isPayment = false) => {
+  const addMessage = useCallback((type: 'user' | 'system', content: string, isPayment = false) => {
     const message: Message = {
       id: Math.random().toString(36).substr(2, 9),
       type,
@@ -89,51 +58,165 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
       isPayment
     };
     setMessages(prev => [...prev, message]);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isNearBottom()) {
+      scrollToBottom();
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (currentRunId && !completedRunsRef.current.has(currentRunId) && !isRunningRef.current) {
+      const isStandalone = currentRunId.startsWith('demo-');
+
+      if (isStandalone) {
+        completedRunsRef.current.add(currentRunId);
+        isRunningRef.current = true;
+        const pollResult = async () => {
+          try {
+            const stages = [
+              { stage: 'intent_parse', message: 'Parsing intent...' },
+              { stage: 'fork_chain', message: 'Forking chain...' },
+              { stage: 'simulate', message: 'Simulating...' },
+              { stage: 'extract_delta', message: 'Extracting reality delta...' },
+              { stage: 'judge', message: 'Judging...' }
+            ];
+
+            for (const step of stages) {
+              await new Promise(r => setTimeout(r, 600));
+              onStreamUpdate(step);
+            }
+
+            const response = await fetch(`/api/chat?runId=${currentRunId}`);
+            const finalData = await response.json();
+            const judgment = finalData.judgment?.judgment || 'ALLOW';
+
+            // Universal Routing: ENFORCE -> Transactions, MONITOR -> Alerts
+            if (policyMode === 'ENFORCE') {
+              // Log ALL outcomes to Transactions Registry in Enforce Mode
+              await fetch('/api/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  from_address: account || '0x598a82A1e968D29A2666847C39bCa5adf5640684',
+                  to_address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb',
+                  function_name: 'approve',
+                  status: judgment === 'DENY' ? 'DENIED' : 'ALLOWED',
+                  severity: judgment === 'DENY' ? 'CRITICAL' : 'LOW'
+                })
+              });
+              addMessage('system', `Simulation Complete: Intent ${judgment === 'DENY' ? 'Blocked' : 'Verified'}. Logged to Transactions Registry.`);
+            } else {
+              // Log ALL outcomes to Alerts in Monitor Mode
+              await fetch('/api/alerts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  event_type: judgment === 'DENY' ? 'SECURITY_VIOLATION' : 'BENIGN_INTENT',
+                  severity: judgment === 'DENY' ? 'HIGH' : 'LOW',
+                  message: `Oracle Simulation: ${finalData.judgment?.reasoning_summary || 'Analysis finished'}`
+                })
+              });
+              addMessage('system', `Simulation Complete: Intent ${judgment}. Security Alert generated (Monitor Mode).`);
+            }
+
+            // If it was an ALLOWED approval, add it to the Approvals registry
+            if (judgment === 'ALLOW' && (finalData.judgment?.reasoning_summary?.toLowerCase().includes('limit') || finalData.judgment?.reasoning_summary?.toLowerCase().includes('safe'))) {
+              await fetch('/api/allowances', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  token: 'USDT',
+                  spender: 'Verified Router',
+                  spender_address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb',
+                  formatted: '100 USDT',
+                  risk_score: finalData.judgment?.risk_score || 5
+                })
+              });
+            }
+
+            onStreamUpdate(finalData);
+            setIsLoading(false);
+            isRunningRef.current = false;
+          } catch (e) {
+            console.error('Polling error:', e);
+            setIsLoading(false);
+            isRunningRef.current = false;
+          }
+        };
+        pollResult();
+      } else {
+        completedRunsRef.current.add(currentRunId);
+        const eventSource = new EventSource(`/api/stream/${currentRunId}`);
+        eventSource.onmessage = (event) => {
+          try {
+            const stage = JSON.parse(event.data);
+            onStreamUpdate(stage);
+            if (stage.message) addMessage('system', stage.message);
+            else if (stage.error) {
+              addMessage('system', `❌ Error: ${stage.error}`);
+              setIsLoading(false);
+              eventSource.close();
+            }
+            if (stage.stage === 'final') {
+              setIsLoading(false);
+              eventSource.close();
+            }
+          } catch (error) { console.error(error); }
+        };
+        eventSource.onerror = () => {
+          eventSource.close();
+          setIsLoading(false);
+        };
+        return () => eventSource.close();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRunId, onStreamUpdate, policyMode, account]);
 
   const handlePay = async () => {
     if (!pendingPayment || !window.ethereum) return;
 
     const payToast = toast.loading('Initiating x402 payment...');
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      // Use cached provider to reduce initialization RPC calls
+      if (!providerRef.current) {
+        providerRef.current = new ethers.BrowserProvider(window.ethereum);
+      }
+
+      const signer = await providerRef.current.getSigner();
 
       const tx = await signer.sendTransaction({
         to: pendingPayment.payTo,
-        value: pendingPayment.priceWei
+        value: pendingPayment.priceWei,
+        // Manual gas limit if RPC estimateGas fails due to rate limiting
+        gasLimit: 100000
       });
 
       toast.info('Payment submitted! Verifying...', { id: payToast });
       addMessage('system', `Payment sent: ${tx.hash.slice(0, 10)}... (Waiting for verification)`);
 
-      // Retry chat request with payment header
       await submitToChat(pendingPayment.originalMessage, tx.hash);
 
       setPendingPayment(null);
       toast.success('Payment verified successfully!', { id: payToast });
     } catch (error: any) {
       console.error('Payment failed details:', error);
+      let errMsg = error?.message || 'Transaction failed';
 
-      let description = error?.message || 'Please check your wallet and try again';
-      const errorMsg = error?.message?.toLowerCase() || '';
-      const errorCode = error?.code;
-
-      if (errorCode === 'ACTION_REJECTED' || errorCode === 4001 || errorMsg.includes('user rejected') || errorMsg.includes('user denied')) {
-        description = 'Transaction was cancelled in MetaMask';
-      } else if (errorCode === 'INSUFFICIENT_FUNDS' || errorMsg.includes('insufficient funds')) {
-        description = 'You don\'t have enough ETH in your local wallet for this payment';
-      } else if (errorMsg.includes('chain id') || errorMsg.includes('network mismatch')) {
-        description = 'Network mismatch. Please ensure MetaMask is on Localhost 8545 (31337)';
-      } else if (errorMsg.includes('nonce') || errorMsg.includes('already pending')) {
-        description = 'MetaMask state mismatch. Try resetting your MetaMask account (Settings > Advanced > Clear activity tab data)';
-      } else if (errorMsg.includes('connect')) {
-        description = 'Failed to connect to MetaMask. Make sure it is unlocked and accounts are selected.';
+      if (errMsg.includes('429') || errMsg.includes('rate limit')) {
+        errMsg = 'Blockchain network is busy (Rate Limited). Please wait 30 seconds and try again.';
+      } else if (errMsg.includes('insufficient funds')) {
+        errMsg = 'Insufficient funds in wallet for payment.';
+      } else if (errMsg.includes('user rejected')) {
+        errMsg = 'Payment cancelled by user.';
       }
 
       toast.error('Payment failed', {
         id: payToast,
-        description
+        description: errMsg,
+        duration: 5000
       });
     }
   };
@@ -141,13 +224,8 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
   const submitToChat = async (message: string, paymentTxHash?: string) => {
     setIsLoading(true);
     try {
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-
-      if (paymentTxHash) {
-        headers['x-payment-tx'] = paymentTxHash;
-      }
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (paymentTxHash) headers['x-payment-tx'] = paymentTxHash;
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -158,16 +236,13 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
       const data = await response.json();
 
       if (response.status === 402) {
-        // x402 Payment Required
         setPendingPayment({ ...data, originalMessage: message });
         addMessage('system', `x402 Payment Required: ${ethers.formatEther(data.priceWei)} ETH for full analysis.`, true);
         setIsLoading(false);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to start analysis');
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to start analysis');
 
       const { runId } = data;
       setCurrentRunId(runId);
@@ -186,15 +261,12 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
 
     const userMessage = inputValue.trim();
     setInputValue('');
-
-    // Add user message
     addMessage('user', userMessage);
     await submitToChat(userMessage);
   };
 
   return (
     <div className="bg-gray-950 border border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden h-full">
-      {/* Header */}
       <div className="px-6 py-4 bg-gray-900/50 border-b border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
@@ -208,8 +280,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
         <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">Live</Badge>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-800">
+      <div className="flex-1 overflow-y-auto pt-6 px-6 pb-8 space-y-6 scrollbar-thin scrollbar-thumb-gray-800 min-h-0">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
             <Shield className="w-12 h-12 text-gray-600" />
@@ -218,16 +289,8 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
         )}
 
         {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[85%] px-4 py-3 rounded-2xl ${message.type === 'user'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                : 'bg-gray-900 border border-gray-800 text-gray-300'
-                }`}
-            >
+          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] px-4 py-3 rounded-2xl ${message.type === 'user' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-gray-900 border border-gray-800 text-gray-300'}`}>
               {message.isPayment ? (
                 <div className="space-y-3 py-1">
                   <div className="flex items-center gap-2 text-yellow-400">
@@ -235,10 +298,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
                     <span className="text-xs font-bold uppercase tracking-widest">Payment Required</span>
                   </div>
                   <p className="text-sm leading-relaxed">{message.content}</p>
-                  <Button
-                    onClick={handlePay}
-                    className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold h-9"
-                  >
+                  <Button onClick={handlePay} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold h-9">
                     <Wallet className="w-4 h-4 mr-2" />
                     Pay via MetaMask
                   </Button>
@@ -266,10 +326,9 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-4" />
       </div>
 
-      {/* Input */}
       <div className="p-4 bg-gray-900/50 border-t border-gray-800">
         <form onSubmit={handleSubmit} className="relative">
           <input
@@ -280,11 +339,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
             className="w-full bg-gray-950 border border-gray-800 rounded-xl pl-4 pr-12 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono"
             disabled={isLoading || !!pendingPayment}
           />
-          <button
-            type="submit"
-            disabled={!inputValue.trim() || isLoading || !!pendingPayment}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-800 disabled:text-gray-600 transition-colors"
-          >
+          <button type="submit" disabled={!inputValue.trim() || isLoading || !!pendingPayment} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-800 disabled:text-gray-600 transition-colors">
             <Shield className="w-4 h-4" />
           </button>
         </form>

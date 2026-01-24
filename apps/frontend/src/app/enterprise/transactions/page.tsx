@@ -35,7 +35,7 @@ export default function TransactionsPage() {
 
   const fetchTransactions = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/transactions');
+      const response = await fetch('/api/transactions');
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
                 <TableBody>
                   {transactions.map((tx) => (
                     <TableRow
-                      key={tx.intent_id}
+                      key={tx.id || (tx as any).intent_id}
                       className="border-gray-700 hover:bg-gray-700/50 cursor-pointer"
                       onClick={() => setSelectedTx(tx)}
                     >
@@ -207,7 +207,7 @@ export default function TransactionsPage() {
             <div>
               <h3 className="text-sm font-semibold text-gray-300 mb-2">Intent ID</h3>
               <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400">
-                {selectedTx.intent_id}
+                {selectedTx.id || (selectedTx as any).intent_id}
               </p>
             </div>
 

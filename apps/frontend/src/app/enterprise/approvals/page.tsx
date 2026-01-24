@@ -5,6 +5,7 @@ import { Zap, Trash2, Copy, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -37,15 +38,56 @@ export default function ApprovalsPage() {
 
   const fetchAllowances = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/allowances');
+      const response = await fetch('/api/allowances');
       if (response.ok) {
         const data = await response.json();
-        setAllowances(data.allowances);
+        setAllowances(data.allowances || []);
       }
     } catch (error) {
       console.error('Failed to fetch allowances:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRevoke = async (id: number) => {
+    const revokeToast = toast.loading('Revoking approval...');
+    try {
+      const response = await fetch(`/api/allowances?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        toast.success('Approval revoked successfully', { id: revokeToast });
+        fetchAllowances();
+        setSelectedAllowances(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      } else {
+        throw new Error('Failed to revoke');
+      }
+    } catch (error) {
+      toast.error('Failed to revoke approval', { id: revokeToast });
+    }
+  };
+
+  const handleBulkRevoke = async () => {
+    const ids = Array.from(selectedAllowances);
+    const revokeToast = toast.loading(`Revoking ${ids.length} approvals...`);
+    try {
+      const response = await fetch(`/api/allowances?ids=${ids.join(',')}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        toast.success('Approvals revoked successfully', { id: revokeToast });
+        fetchAllowances();
+        setSelectedAllowances(new Set());
+      } else {
+        throw new Error('Failed to revoke');
+      }
+    } catch (error) {
+      toast.error('Failed to revoke approvals', { id: revokeToast });
     }
   };
 
@@ -100,7 +142,7 @@ export default function ApprovalsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{allowances.length}</div>
+            <div className="text-2xl font-bold text-white">{(allowances || []).length}</div>
           </CardContent>
         </Card>
 
@@ -112,7 +154,7 @@ export default function ApprovalsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-400">
-              {allowances.filter(a => a.risk_score >= 80).length}
+              {(allowances || []).filter(a => a.risk_score >= 80).length}
             </div>
           </CardContent>
         </Card>
@@ -125,7 +167,7 @@ export default function ApprovalsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-400">
-              {allowances.filter(a => a.risk_score >= 50 && a.risk_score < 80).length}
+              {(allowances || []).filter(a => a.risk_score >= 50 && a.risk_score < 80).length}
             </div>
           </CardContent>
         </Card>
@@ -138,7 +180,7 @@ export default function ApprovalsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-400">
-              {allowances.filter(a => a.amount.includes('115792')).length}
+              {(allowances || []).filter(a => a.amount.includes('115792')).length}
             </div>
           </CardContent>
         </Card>
@@ -153,11 +195,18 @@ export default function ApprovalsPage() {
                 {selectedAllowances.size} approval{selectedAllowances.size !== 1 ? 's' : ''} selected
               </p>
               <div className="flex gap-3">
-                <Button className="bg-red-600 hover:bg-red-700 gap-2">
+                <Button
+                  className="bg-red-600 hover:bg-red-700 gap-2"
+                  onClick={handleBulkRevoke}
+                >
                   <Trash2 className="w-4 h-4" />
                   Revoke Selected
                 </Button>
-                <Button variant="outline" className="border-gray-700">
+                <Button
+                  variant="outline"
+                  className="border-gray-700 font-bold"
+                  onClick={() => setSelectedAllowances(new Set())}
+                >
                   Cancel
                 </Button>
               </div>
@@ -192,7 +241,7 @@ export default function ApprovalsPage() {
                     <TableHead className="w-10">
                       <input
                         type="checkbox"
-                        checked={selectedAllowances.size === allowances.length}
+                        checked={(allowances || []).length > 0 && selectedAllowances.size === allowances.length}
                         onChange={selectAll}
                         className="rounded"
                       />
@@ -209,9 +258,8 @@ export default function ApprovalsPage() {
                   {allowances.map((allowance) => (
                     <TableRow
                       key={allowance.id}
-                      className={`border-gray-700 hover:bg-gray-700/50 ${
-                        selectedAllowances.has(allowance.id) ? 'bg-gray-700/30' : ''
-                      }`}
+                      className={`border-gray-700 hover:bg-gray-700/50 ${selectedAllowances.has(allowance.id) ? 'bg-gray-700/30' : ''
+                        }`}
                     >
                       <TableCell>
                         <input
@@ -260,6 +308,7 @@ export default function ApprovalsPage() {
                           variant="ghost"
                           size="sm"
                           className="text-red-400 hover:text-red-300"
+                          onClick={() => handleRevoke(allowance.id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
