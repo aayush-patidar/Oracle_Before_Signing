@@ -14,9 +14,11 @@ export async function apiCall<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = API_BASE === '/api' 
-    ? `/api${endpoint}` 
-    : `${API_BASE}${endpoint}`;
+  const url = API_BASE.endsWith('/api') && endpoint.startsWith('/')
+    ? `${API_BASE}${endpoint}`
+    : API_BASE === '/api'
+      ? `/api${endpoint}`
+      : `${API_BASE}${endpoint}`;
 
   const response = await fetch(url, {
     ...options,

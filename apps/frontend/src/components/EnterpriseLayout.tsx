@@ -55,13 +55,13 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
 
   // Helper to convert chainId to dropdown value
   const chainIdToName = (id: string | null) => {
-    if (!id) return 'localhost';
+    if (!id) return 'monad'; // Default to Monad in deployment
     const normalized = id.toString().toLowerCase();
     if (normalized === '0x7a69' || normalized === '31337') return 'localhost';
     if (normalized === '0x279f' || normalized === '10143') return 'monad';
     if (normalized === '0xaa36a7' || normalized === '11155111') return 'sepolia';
     if (normalized === '0x1' || normalized === '1') return 'mainnet';
-    return 'localhost'; // Fallback to localhost display
+    return 'monad'; // Fallback to Monad for better deployment CX
   };
 
   const handleExport = async () => {

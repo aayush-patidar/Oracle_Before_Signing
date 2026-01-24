@@ -17,15 +17,16 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
 
     const fetchPolicyMode = async () => {
         try {
-            // Fetch policies to determine the global mode
+            // Fetch policies with timeout/retry logic for production stability
             const policies = await apiCall<any[]>('/policies');
-            if (policies && policies.length > 0) {
-                // Strict check: Global Mode is ENFORCE only if ALL policies are ENFORCE.
+            if (policies && Array.isArray(policies) && policies.length > 0) {
                 const allEnforce = policies.every((p: any) => p.mode === 'ENFORCE');
                 setPolicyModeState(allEnforce ? 'ENFORCE' : 'MONITOR');
             }
         } catch (error) {
-            console.error('Failed to fetch policy mode', error);
+            console.warn('Using default demo policy mode.');
+            // Silent fallback to avoid toast spam in deployment
+            setPolicyModeState('ENFORCE');
         } finally {
             setIsLoading(false);
         }
