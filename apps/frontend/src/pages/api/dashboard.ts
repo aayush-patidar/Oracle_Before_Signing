@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export async function GET() {
-    return NextResponse.json({
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+    res.status(200).json({
         totalTransactions: 12,
         pendingTransactions: 2,
         allowedTransactions: 8,
