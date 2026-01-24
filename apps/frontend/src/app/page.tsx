@@ -63,8 +63,20 @@ const ERC20_ABI = [
   "function symbol() view returns (string)"
 ];
 
+const DEFAULT_CHAIN_STATE = {
+  contracts: {
+    mockUSDT: { address: '0xf187ba9BdF5aE32D7F75A537CE7399D0855410C6', symbol: 'USDT', decimals: 6 },
+    maliciousSpender: { address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb' }
+  },
+  wallets: {
+    user: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+    maliciousSpender: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'
+  },
+  initialState: { userBalance: '1000000000' }
+};
+
 export default function Dashboard() {
-  const [chainState, setChainState] = useState<ChainState | null>(null);
+  const [chainState, setChainState] = useState<ChainState | null>(DEFAULT_CHAIN_STATE);
   const [chainData, setChainData] = useState<ChainData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,7 +89,8 @@ export default function Dashboard() {
 
   // Initialize JSON-RPC provider (memoized to prevent re-renders)
   const provider = useMemo(() => {
-    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'http://127.0.0.1:8545';
+    // Default to Monad Testnet for deployment if env not set
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://testnet-rpc.monad.xyz/';
     return new ethers.JsonRpcProvider(rpcUrl);
   }, []);
 
