@@ -290,7 +290,7 @@ export default function OverviewPage() {
             <div className="text-center py-8">
               <Wallet className="w-12 h-12 text-gray-600 mx-auto mb-3" />
               <p className="text-gray-400 mb-2">Connect your wallet to test transactions</p>
-              <p className="text-sm text-gray-500">Use the "Connect Wallet" button in the top right</p>
+              <p className="text-sm text-gray-500">Use the &quot;Connect Wallet&quot; button in the top right</p>
             </div>
           ) : (
             <div className="space-y-4">

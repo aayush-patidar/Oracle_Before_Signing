@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 
 interface Transaction {
+  id?: string;
   intent_id: string;
   from_address: string;
   to_address: string;

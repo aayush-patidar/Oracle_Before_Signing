@@ -33,25 +33,37 @@ export default function handler(
   }
 
   try {
-    // From apps/frontend/src/pages/api/chain-state.ts, go up to NoahAi root
-    const statePath = path.join(process.cwd(), '../../chain/state.json');
+    // Try multiple paths for robustness (Vercel vs Local)
+    const pathsToCheck = [
+      path.join(process.cwd(), 'public', 'state.json'),              // Production/Vercel
+      path.join(process.cwd(), 'apps', 'frontend', 'public', 'state.json'), // Monorepo Root
+      path.join(process.cwd(), '../../chain/state.json')             // Local Dev
+    ];
 
-    if (!fs.existsSync(statePath)) {
-      console.warn('Chain state file not found, using defaults.');
+    let statePath = '';
+    for (const p of pathsToCheck) {
+      if (fs.existsSync(p)) {
+        statePath = p;
+        break;
+      }
+    }
+
+    if (!statePath) {
+      console.warn('Chain state file not found, using Monad Testnet defaults.');
       return res.status(200).json({
         contracts: {
           mockUSDT: {
-            address: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+            address: '0xf187ba9BdF5aE32D7F75A537CE7399D0855410C6',
             symbol: 'USDT',
             decimals: 6
           },
           maliciousSpender: {
-            address: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512'
+            address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'
           }
         },
         wallets: {
           user: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
-          maliciousSpender: '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+          maliciousSpender: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb' // Using spender as malicious wallet for demo
         },
         initialState: {
           userBalance: '1000000000'

@@ -4,8 +4,8 @@ import { ethers } from 'ethers';
 // Simple in-memory storage for demo runs (ephemeral)
 const runIntents: Record<string, string> = {};
 
-const PRICE_WEI = '500000000000000'; // 0.0005 ETH
-const PAY_TO = '0x598a82A1e968D29A2666847C39bCa5adf5640684';
+const PRICE_WEI = process.env.X402_PRICE_WEI || '500000000000000'; // 0.0005 ETH (default)
+const PAY_TO = process.env.X402_PAY_TO || '0x598a82A1e968D29A2666847C39bCa5adf5640684';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');

@@ -24,48 +24,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
 
-    // Initialize state on mount
-    useEffect(() => {
-        if (window.ethereum) {
-            const p = new ethers.BrowserProvider(window.ethereum);
-            setProvider(p);
-            checkConnection(p);
-
-            (window.ethereum as any).on('accountsChanged', handleAccountsChanged);
-            (window.ethereum as any).on('chainChanged', handleChainChanged);
-        }
-
-        return () => {
-            if (window.ethereum) {
-                (window.ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
-                (window.ethereum as any).removeListener('chainChanged', handleChainChanged);
-            }
-        };
-    }, []);
-
-    const handleAccountsChanged = async (accounts: string[]) => {
-        if (accounts.length > 0) {
-            setAccount(accounts[0]);
-            if (provider) await updateBalance(accounts[0], provider);
-        } else {
-            setAccount(null);
-            setBalance('0');
-            toast.info('Wallet disconnected');
-        }
-    };
-
-    const handleChainChanged = (chainId: string) => {
-        setChainId(chainId);
-        // Refresh provider on chain change
-        if (window.ethereum) {
-            const newP = new ethers.BrowserProvider(window.ethereum);
-            setProvider(newP);
-            if (account) updateBalance(account, newP);
-        }
-    };
-
     const lastBalanceCheck = React.useRef<number>(0);
-    const updateBalance = async (address: string, p: ethers.BrowserProvider) => {
+    const updateBalance = React.useCallback(async (address: string, p: ethers.BrowserProvider) => {
         if (!address) return;
 
         // Throttle balance updates (max once per 5 seconds)
@@ -83,9 +43,41 @@ export function Web3Provider({ children }: { children: ReactNode }) {
                 console.error('Error fetching balance:', error);
             }
         }
-    };
+    }, []);
 
-    const checkConnection = async (p: ethers.BrowserProvider) => {
+    const handleAccountsChanged = React.useCallback(async (accounts: string[]) => {
+        if (accounts.length > 0) {
+            setAccount(accounts[0]);
+            if (window.ethereum) {
+                const tempP = new ethers.BrowserProvider(window.ethereum);
+                await updateBalance(accounts[0], tempP);
+            }
+        } else {
+            setAccount(null);
+            setBalance('0');
+            toast.info('Wallet disconnected');
+        }
+    }, [updateBalance]);
+
+    const handleChainChanged = React.useCallback((chainId: string) => {
+        setChainId(chainId);
+        // Refresh provider on chain change
+        if (window.ethereum) {
+            const newP = new ethers.BrowserProvider(window.ethereum);
+            setProvider(newP);
+            // We need to get the account again to update balance
+            // But usually account doesn't change on chain change, just balance might
+            // So we use the 'account' state? No, 'account' state is stale here if not in deps.
+            // Better to re-fetch accounts to be safe
+            newP.listAccounts().then(accounts => {
+                if (accounts.length > 0) {
+                    updateBalance(accounts[0].address, newP);
+                }
+            });
+        }
+    }, [updateBalance]); // updateBalance is stable
+
+    const checkConnection = React.useCallback(async (p: ethers.BrowserProvider) => {
         if (!window.ethereum) return;
 
         try {
@@ -99,7 +91,26 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error('Error checking connection:', error);
         }
-    };
+    }, [updateBalance]);
+
+    // Initialize state on mount
+    useEffect(() => {
+        if (window.ethereum) {
+            const p = new ethers.BrowserProvider(window.ethereum);
+            setProvider(p);
+            checkConnection(p);
+
+            (window.ethereum as any).on('accountsChanged', handleAccountsChanged);
+            (window.ethereum as any).on('chainChanged', handleChainChanged);
+        }
+
+        return () => {
+            if (window.ethereum) {
+                (window.ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
+                (window.ethereum as any).removeListener('chainChanged', handleChainChanged);
+            }
+        };
+    }, [checkConnection, handleAccountsChanged, handleChainChanged]);
 
     const connectWallet = async () => {
         if (!window.ethereum) {
