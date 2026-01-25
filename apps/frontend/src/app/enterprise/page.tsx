@@ -19,6 +19,7 @@ interface DashboardStats {
   criticalAlerts: number;
   highAlerts: number;
   recentAlerts: any[];
+  totalAlerts: number;
 }
 
 export default function OverviewPage() {
@@ -63,11 +64,17 @@ export default function OverviewPage() {
 
   useEffect(() => {
     fetchDashboardStats();
+
+    // Poll for updates every 3 seconds to ensure live reflection of Chat actions
+    const interval = setInterval(fetchDashboardStats, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardStats = async () => {
     try {
-      const data = await apiCall<DashboardStats>('/dashboard');
+      // Use cache: 'no-store' to safely ensure fresh data
+      // Note: apiCall wraps fetch. If using standard browser fetch, 'no-store' works.
+      const data = await apiCall<DashboardStats>('/dashboard', { cache: 'no-store' });
       setStats(data);
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error);
@@ -128,6 +135,34 @@ export default function OverviewPage() {
         id: loadingToast,
         description: 'Maximum allowance granted to test contract.'
       });
+
+      // RECORD TRANSACTION
+      try {
+        await apiCall('/transactions', {
+          method: 'POST',
+          body: JSON.stringify({
+            from_address: account,
+            to_address: addresses.spender,
+            function_name: 'approve',
+            status: 'ALLOWED',
+            severity: 'HIGH', // High risk action
+            network: networkName
+          })
+        });
+
+        // CREATE ALERT
+        await apiCall('/alerts', {
+          method: 'POST',
+          body: JSON.stringify({
+            event_type: 'Dangerous Approval',
+            message: `Unlimited allowance granted to ${addresses.spender.slice(0, 10)}... on ${networkName}`,
+            severity: 'CRITICAL'
+          })
+        });
+      } catch (recordError) {
+        console.error('Failed to record transaction/alert:', recordError);
+        // Don't fail the UI flow just because recording failed
+      }
 
       fetchDashboardStats();
     } catch (error: any) {
@@ -233,14 +268,14 @@ export default function OverviewPage() {
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300">
-              Active Alerts
+              Security Events
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-400">
-              {(stats?.criticalAlerts || 0) + (stats?.highAlerts || 0)}
+              {stats?.totalAlerts || 0}
             </div>
-            <p className="text-xs text-gray-400 mt-1">Critical + High</p>
+            <p className="text-xs text-gray-400 mt-1">Total Events recorded</p>
           </CardContent>
         </Card>
       </div>
@@ -404,7 +439,9 @@ export default function OverviewPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-gray-300">RPC Connection</span>
-              <Badge className="bg-green-500/20 text-green-400">Healthy</Badge>
+              <Badge className={`${isConnected ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                {isConnected ? "Healthy" : "Disconnected"}
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-gray-300">Policy Engine</span>

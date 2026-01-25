@@ -13,6 +13,7 @@ interface Web3ContextType {
     connectWallet: () => Promise<void>;
     disconnectWallet: () => void;
     switchNetwork: (networkName: string) => Promise<void>;
+    sendPayment: (to: string, amountWei: string) => Promise<string>;
 }
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -237,6 +238,37 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         }
     };
 
+    const sendPayment = async (to: string, amountWei: string) => {
+        if (!window.ethereum || !account) {
+            throw new Error('Wallet not connected');
+        }
+
+        const p = new ethers.BrowserProvider(window.ethereum);
+        try {
+            const signer = await p.getSigner();
+            const tx = await signer.sendTransaction({
+                to,
+                value: amountWei
+            });
+
+            toast.promise(tx.wait(), {
+                loading: 'Verifying payment on-chain...',
+                success: 'Payment verified!',
+                error: 'Verification failed'
+            });
+
+            await tx.wait();
+
+            // Refresh balance after payment
+            setTimeout(() => updateBalance(account, p), 2000);
+
+            return tx.hash;
+        } catch (error: any) {
+            console.error('Payment failed:', error);
+            throw error;
+        }
+    };
+
     return (
         <Web3Context.Provider
             value={{
@@ -247,7 +279,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
                 isConnecting,
                 connectWallet,
                 disconnectWallet,
-                switchNetwork
+                switchNetwork,
+                sendPayment
             }}
         >
             {children}
