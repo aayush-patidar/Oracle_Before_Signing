@@ -384,40 +384,57 @@ export default function OverviewPage() {
         </CardHeader>
         <CardContent>
           {stats && stats.recentAlerts.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {stats.recentAlerts.map((alert: any, idx: number) => (
                 <div
                   key={idx}
-                  className="flex items-start justify-between p-3 bg-gray-900 rounded-lg border border-gray-700"
+                  className="flex items-center justify-between p-4 bg-gray-900/50 rounded-2xl border border-white/5 hover:bg-gray-900 transition-colors"
                 >
-                  <div className="flex items-start gap-3 flex-1">
-                    <AlertTriangle
-                      className={`w-5 h-5 mt-0.5 flex-shrink-0 ${alert.severity === 'CRITICAL'
-                        ? 'text-red-500'
-                        : alert.severity === 'HIGH'
-                          ? 'text-orange-500'
-                          : 'text-yellow-500'
-                        }`}
-                    />
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className={`mt-1 p-2.5 rounded-lg border flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                      alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
+                        'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                      }`}>
+                      <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-200">
+                      <p className="text-sm font-black text-gray-200 uppercase tracking-wider mb-1">
                         {alert.event_type}
                       </p>
-                      <p className="text-sm text-gray-400">{alert.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(alert.created_at).toLocaleString()}
+                      <p className="text-sm text-gray-400 leading-relaxed max-w-xl">{alert.message}</p>
+                      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
+                        <Clock className="w-3 h-3" />
+                        {new Date(alert.created_at || alert.createdAt || new Date()).toLocaleString()}
                       </p>
                     </div>
                   </div>
-                  <Badge
-                    variant={
-                      alert.severity === 'CRITICAL'
-                        ? 'destructive'
-                        : 'secondary'
-                    }
-                  >
-                    {alert.severity}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-3 min-w-[120px]">
+                    <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                      alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
+                        'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+                      }`}>
+                      {alert.severity}
+                    </div>
+                    {!alert.acknowledged && (
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await apiCall(`/alerts/${alert.id || alert._id}`, {
+                              method: 'PATCH',
+                              body: JSON.stringify({ acknowledged: true })
+                            });
+                            fetchDashboardStats();
+                          } catch (e) {
+                            console.error('Failed to acknowledge:', e);
+                          }
+                        }}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] tracking-widest rounded-xl shadow-lg shadow-blue-900/20"
+                      >
+                        Acknowledge
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -245,26 +245,48 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
         const p = new ethers.BrowserProvider(window.ethereum);
         try {
+            console.log('💳 Initiating payment to:', to, 'amount:', amountWei);
             const signer = await p.getSigner();
+            const address = await signer.getAddress();
+            console.log('👤 Signer address:', address);
+
+            // Fetch balance to pre-verify
+            const balance = await p.getBalance(address);
+            const required = BigInt(amountWei) + ethers.parseEther('0.002'); // amount + gas buffer
+
+            if (balance < required) {
+                const balanceEth = ethers.formatEther(balance);
+                const requiredEth = ethers.formatEther(required);
+                throw new Error(`Insufficient MON balance. You have ${balanceEth}, but ~${requiredEth} is needed for the fee + gas.`);
+            }
+
             const tx = await signer.sendTransaction({
                 to,
-                value: amountWei
+                value: amountWei,
+                gasLimit: 30000 // Force gas limit to bypass estimateGas reverts on some Monad RPCs
             });
+
+            console.log('⏳ Transaction submitted:', tx.hash);
 
             toast.promise(tx.wait(), {
                 loading: 'Verifying payment on-chain...',
                 success: 'Payment verified!',
-                error: 'Verification failed'
+                error: (err: any) => `Verification failed: ${err.message || 'Unknown error'}`
             });
 
-            await tx.wait();
+            const receipt = await tx.wait();
+            console.log('✅ Transaction confirmed in block:', receipt?.blockNumber);
 
             // Refresh balance after payment
             setTimeout(() => updateBalance(account, p), 2000);
 
             return tx.hash;
         } catch (error: any) {
-            console.error('Payment failed:', error);
+            console.error('❌ sendPayment failed:', error);
+            // Prettify common error messages
+            if (error.message.includes('insufficient funds')) {
+                throw new Error('Insufficient MON balance for the security fee and gas.');
+            }
             throw error;
         }
     };

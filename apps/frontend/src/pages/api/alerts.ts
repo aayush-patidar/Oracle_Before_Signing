@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAlerts, addAlert } from '@/lib/demo-store';
+import { getAlerts, addAlert, acknowledgeAlert } from '@/lib/demo-store';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,6 +19,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (req.method === 'PATCH') {
+        const id = req.query.id || req.body.id;
+        if (id) {
+            const updated = acknowledgeAlert(id as string);
+            return res.status(200).json(updated);
+        }
         return res.status(200).json({ success: true });
     }
 

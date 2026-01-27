@@ -238,7 +238,7 @@ export default function TransactionsPage() {
             <div>
               <h3 className="text-sm font-semibold text-gray-300 mb-2">Created</h3>
               <p className="text-gray-400 text-sm">
-                {new Date(selectedTx.created_at).toLocaleString()}
+                {new Date(selectedTx.created_at || (selectedTx as any).createdAt || new Date()).toLocaleString()}
               </p>
             </div>
 

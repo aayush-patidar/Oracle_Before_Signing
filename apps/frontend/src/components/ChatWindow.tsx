@@ -40,9 +40,23 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if (isLoading) return;
 
-    const userMessage = inputValue;
+    const userMessage = inputValue.trim();
+    if (!userMessage) return;
+
+    // Validation: Check for address and amount/max/unlimited
+    const hasAddress = /0x[a-fA-F0-9]{40}/.test(userMessage);
+    const hasAmount = /\b\d+(\.\d+)?\b/i.test(userMessage) ||
+      /\b(max|unlimited)\b/i.test(userMessage);
+
+    if (!hasAddress || !hasAmount) {
+      addMessage('user', userMessage);
+      setInputValue('');
+      addMessage('system', 'Simulation Error: Please provide both a recipient address (0x...) and an amount (or "max") for processing.', 'error');
+      return;
+    }
+
     setInputValue('');
     addMessage('user', userMessage);
     setIsLoading(true);
@@ -78,28 +92,53 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
     if (!pendingPayment) return;
     setIsLoading(true);
     try {
-      addMessage('system', 'Initiating secure payment authorization...', 'status');
-      const txHash = await sendPayment(pendingPayment.payTo, pendingPayment.priceWei);
-      addMessage('system', `Snapshot verification ID: ${txHash.substring(0, 10)}... (Awaiting confirmation)`, 'status');
+      // Robust way to find the message that triggered the payment required response
+      const intentMessage = [...messages].reverse().find(m => m.role === 'user')?.content || inputValue;
 
+      addMessage('system', 'Initiating secure payment authorization...', 'status');
+
+      // Perform the on-chain payment
+      const txHash = await sendPayment(pendingPayment.payTo, pendingPayment.priceWei);
+
+      addMessage('system', `Verification Hash: ${txHash.substring(0, 10)}... (Simulating Outcome)`, 'status');
+
+      // Retry the chat request with the payment verification header
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-payment-tx': txHash
         },
-        body: JSON.stringify({ message: messages[messages.length - 2].content }),
+        body: JSON.stringify({ message: intentMessage }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Gateway server error (${response.status})`);
+      }
 
       const data = await response.json();
       setPendingPayment(null);
+
       if (data.runId) {
         onNewRun(data);
         startPolling(data.runId);
+      } else {
+        addMessage('system', 'Simulation started successfully.', 'success');
       }
     } catch (e: any) {
-      console.error('Payment error:', e);
-      addMessage('system', 'Payment rejected by gateway.', 'error');
+      console.error('Payment flow aborted:', e);
+      const errorMsg = e?.message || 'Gateway connection failed.';
+
+      // Check for specific MetaMask errors
+      if (errorMsg.includes('user rejected') || errorMsg.includes('ACTION_REJECTED')) {
+        addMessage('system', 'Payment cancelled: You rejected the request in MetaMask.', 'error');
+      } else if (errorMsg.includes('insufficient funds')) {
+        addMessage('system', 'Payment failed: Insufficient MON balance for the security fee.', 'error');
+      } else {
+        addMessage('system', `Payment Error: ${errorMsg}`, 'error');
+      }
+
       setIsLoading(false);
     }
   };

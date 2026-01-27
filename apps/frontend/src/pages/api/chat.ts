@@ -4,10 +4,12 @@ import { ethers } from 'ethers';
 // Simple in-memory storage for demo runs (ephemeral)
 const runIntents: Record<string, string> = {};
 
-const PRICE_WEI = process.env.X402_PRICE_WEI || '500000000000000'; // 0.0005 ETH (default)
-const PAY_TO = process.env.X402_PAY_TO || '0x598a82A1e968D29A2666847C39bCa5adf5640684';
+const PRICE_WEI = process.env.X402_PRICE_WEI || '100000000000000'; // Match root .env default
+const PAY_TO = process.env.X402_PAY_TO || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'; // Safer fallback EOA
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
+    console.log('💬 Chat API Internal Config:', { PAY_TO, PRICE_WEI });
+
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-payment-tx');
@@ -99,9 +101,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
                     risk_flags: ['INSUFFICIENT_FUNDS_ALARM']
                 },
                 timeline: [
-                    { time: 'T+0s', event: 'Intent Received', status: 'success' },
-                    { time: 'T+2s', event: 'Balance check failed', status: 'warning' },
-                    { time: 'T+5s', event: 'Oracle Verdict: WARNING', status: 'warning' }
+                    { time: 'T+0s', event: 'Intent Received', status: 'success', description: 'Transaction parameters synthesized from user prompt.' },
+                    { time: 'T+2s', event: 'Balance check failed', status: 'warning', description: 'Address liquidity verification returned insufficient delta.' },
+                    { time: 'T+5s', event: 'Oracle Verdict: WARNING', status: 'warning', description: 'Forced warning generated for potential chain-side rejection.' }
                 ]
             };
         }
@@ -125,9 +127,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
                     risk_flags: ['CRITICAL_EXPOSURE', 'UNLIMITED_APPROVAL']
                 },
                 timeline: [
-                    { time: 'T+0s', event: 'Approval signed', status: 'critical' },
-                    { time: 'T+12s', event: 'Unauthorized Sweep Initiated', status: 'critical' },
-                    { time: 'T+15s', event: 'Wallet Emptied', status: 'danger' }
+                    { time: 'T+0s', event: 'Approval signed', status: 'critical', description: 'High-risk MaxUint256 signature simulated on forked state.' },
+                    { time: 'T+12s', event: 'Unauthorized Sweep Initiated', status: 'critical', description: 'Adversarial actor triggered recursive withdraw on spender.' },
+                    { time: 'T+15s', event: 'Wallet Emptied', status: 'danger', description: 'Full account depletion observed in synthetic causality branch.' }
                 ]
             };
         }
@@ -154,9 +156,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
                     risk_flags: []
                 },
                 timeline: [
-                    { time: 'T+0s', event: 'Approval signed', status: 'success' },
-                    { time: 'T+5s', event: 'Limit verified', status: 'success' },
-                    { time: 'T+10s', event: 'Transaction confirmed', status: 'success' }
+                    { time: 'T+0s', event: 'Approval signed', status: 'success', description: 'Standard allowance signature verified for security.' },
+                    { time: 'T+5s', event: 'Limit verified', status: 'success', description: 'Protocol threshold confirm within organizational guidelines.' },
+                    { time: 'T+10s', event: 'Transaction confirmed', status: 'success', description: 'Simulated on-chain finality reached with nominal gas.' }
                 ]
             };
         }
@@ -196,9 +198,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
                         risk_flags: ['UNWHITELISTED_SPENDER', 'MEDIUM_THRESHOLD_EXCEEDED']
                     },
                     timeline: [
-                        { time: 'T+0s', event: 'Approval signed', status: 'warning' },
-                        { time: 'T+8s', event: 'Exposure log generated', status: 'warning' },
-                        { time: 'T+15s', event: 'Transaction monitored', status: 'success' }
+                        { time: 'T+0s', event: 'Approval signed', status: 'warning', description: 'Medium-risk approval granted to unverified router.' },
+                        { time: 'T+8s', event: 'Exposure log generated', status: 'warning', description: 'Internal security log dispatched for compliance review.' },
+                        { time: 'T+15s', event: 'Transaction monitored', status: 'success', description: 'Real-time observation window opened for post-exec delta.' }
                     ]
                 };
             }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, AlertCircle, Info, CheckCircle, Filter } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, CheckCircle, Filter, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -199,53 +199,62 @@ export default function AlertsPage() {
               {filteredAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className="border-l-4 border-gray-600 bg-gray-900 p-4 rounded-lg hover:bg-gray-800/80 transition-colors"
-                  style={{
-                    borderLeftColor:
-                      alert.severity === 'CRITICAL'
-                        ? '#ef4444'
-                        : alert.severity === 'HIGH'
-                          ? '#f97316'
-                          : alert.severity === 'MEDIUM'
-                            ? '#eab308'
-                            : '#3b82f6'
-                  }}
+                  className={`relative overflow-hidden border border-white/5 bg-[#0b1222]/50 p-6 rounded-[2rem] transition-all hover:bg-[#0b1222]/80 group ${alert.acknowledged ? 'opacity-60' : ''}`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      {getSeverityIcon(alert.severity)}
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className={`mt-1 p-3 rounded-xl border flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                        alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
+                          alert.severity === 'MEDIUM' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
+                            'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                        }`}>
+                        {getSeverityIcon(alert.severity)}
+                      </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-white">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="font-black text-white uppercase tracking-wider text-sm">
                             {alert.event_type}
                           </h3>
                           {!alert.acknowledged && (
-                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                           )}
                         </div>
-                        <p className="text-gray-300 mt-1">{alert.message}</p>
-                        {alert.transaction_id && (
-                          <p className="text-xs text-gray-500 mt-2 font-mono">
-                            TX: {alert.transaction_id.substring(0, 16)}...
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          {new Date(alert.created_at || alert.createdAt || new Date().toISOString()).toLocaleString()}
-                        </p>
+                        <p className="text-slate-400 text-sm font-medium leading-relaxed">{alert.message}</p>
+                        <div className="flex items-center gap-4 mt-3">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            <Clock className="w-3 h-3" />
+                            {new Date(alert.created_at || alert.createdAt || new Date().toISOString()).toLocaleString()}
+                          </div>
+                          {alert.transaction_id && (
+                            <div className="text-[10px] text-blue-500/50 font-mono font-bold">
+                              TX: {alert.transaction_id.substring(0, 12)}...
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Badge className={getSeverityColor(alert.severity)}>
+
+                    <div className="flex flex-col items-end gap-3 min-w-[140px]">
+                      <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                        alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
+                          alert.severity === 'MEDIUM' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
+                            'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                        }`}>
                         {alert.severity}
-                      </Badge>
-                      {!alert.acknowledged && (
-                        <Button
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
+                      </div>
+
+                      {!alert.acknowledged ? (
+                        <button
                           onClick={() => handleAcknowledge(alert.id || (alert as any)._id)}
+                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-[11px] rounded-xl transition-all shadow-[0_10px_20px_rgba(37,99,235,0.2)] active:scale-95 flex items-center justify-center gap-2"
                         >
                           Acknowledge
-                        </Button>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          <CheckCircle className="w-3 h-3 text-emerald-500" />
+                          Verified
+                        </div>
                       )}
                     </div>
                   </div>

@@ -96,3 +96,14 @@ export const removeMultipleAllowances = (ids: number[]) => {
 export const setDemoMode = (mode: string) => {
     globalAny.demoStore.mode = mode;
 };
+
+export const acknowledgeAlert = (id: number | string) => {
+    const alert = globalAny.demoStore.alerts.find((a: any) =>
+        a.id.toString() === id.toString() ||
+        (a._id && a._id.toString() === id.toString())
+    );
+    if (alert) {
+        alert.acknowledged = true;
+    }
+    return alert;
+};
