@@ -111,7 +111,8 @@ const start = async () => {
 
     await fastify.listen({ port: PORT, host: HOST });
     console.log(`\n✅ OBS Backend listening at http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-    console.log(`   Health check: http://localhost:${PORT}/health\n`);
+    console.log(`   Health check: http://localhost:${PORT}/health`);
+    console.log(`\n📝 Registered Routes:\n${fastify.printRoutes()}`);
   } catch (err) {
     fastify.log.error(err);
     console.error(`\n❌ Failed to start backend on ${HOST}:${PORT}`);

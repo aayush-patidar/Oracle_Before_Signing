@@ -5,40 +5,9 @@ const globalAny: any = global;
 
 if (!globalAny.demoStore) {
     globalAny.demoStore = {
-        transactions: [
-            {
-                id: 't-init-1',
-                from_address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
-                to_address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb',
-                function_name: 'approve',
-                status: 'DENIED',
-                createdAt: new Date(Date.now() - 3600000).toISOString(),
-                severity: 'HIGH'
-            }
-        ],
-        alerts: [
-            {
-                id: 1,
-                severity: 'HIGH',
-                event_type: 'MONITOR_MODE_VIOLATION',
-                message: 'Transaction flagged by policies but allowed in Monitor Mode.',
-                acknowledged: false,
-                createdAt: new Date(Date.now() - 1800000).toISOString()
-            }
-        ],
-        allowances: [
-            {
-                id: 1,
-                token: 'USDT',
-                token_address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-                spender: 'Uniswap V3 Router',
-                spender_address: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
-                amount: '1000000000000000000000',
-                allowance_formatted: '1,000 USDT',
-                risk_score: 5,
-                last_updated: new Date(Date.now() - 86400000).toISOString()
-            }
-        ],
+        transactions: [],
+        alerts: [],
+        allowances: [],
         mode: 'MONITOR'
     };
 }

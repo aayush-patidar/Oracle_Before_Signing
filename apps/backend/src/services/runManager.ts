@@ -90,7 +90,7 @@ export class RunManager {
 
       // Stage 4: Extract delta
       this.emit(runId, { stage: 'extract_delta', message: 'Extracting reality delta...' });
-      const realityDelta = await this.analysisService.extractDelta(simulationResult);
+      const realityDelta = await this.analysisService.extractDelta(simulationResult, intent);
 
       // Stage 5: Judge
       this.emit(runId, { stage: 'judge', message: 'Judging...' });
@@ -130,6 +130,13 @@ export class RunManager {
         }
       } catch (err) {
         console.error('Failed to apply policy mode logic:', err);
+      }
+
+      // FIX: If transaction is BLOCKED, balance should remain unchanged
+      // The simulation shows potential spend, but blocked transactions don't execute
+      if (nextStep === 'BLOCKED') {
+        console.log(`🛡️ Transaction BLOCKED: Resetting balance_after to balance_before (${realityDelta.delta.balance_before} USDT)`);
+        realityDelta.delta.balance_after = realityDelta.delta.balance_before;
       }
 
       // Stage 6: Final

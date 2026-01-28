@@ -36,7 +36,7 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
         // Optimistic update
         setPolicyModeState(mode);
         try {
-            await apiCall('/policies', {
+            await apiCall('/policies/global-mode', {
                 method: 'POST',
                 body: JSON.stringify({ mode })
             });

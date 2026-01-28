@@ -23,8 +23,14 @@ const MAX_UINT = '11579208923731619542357098500868790785326998466564056403945758
 
 export class AnalysisService {
   async extractDelta(simulationResult: SimulationResult, intent?: Intent): Promise<RealityDelta> {
-    const beforeBalance = parseFloat(simulationResult.beforeState.balance) / 10**6; // Convert from wei to USDT
-    const afterBalance = parseFloat(simulationResult.afterState.balance) / 10**6;
+    // Check if balance is already in USDT format (< 1000000) or in wei format (>= 1000000)
+    const rawBeforeBalance = parseFloat(simulationResult.beforeState.balance);
+    const rawAfterBalance = parseFloat(simulationResult.afterState.balance);
+
+    // If balance is >= 1000000, it's in wei (6 decimals for USDT), otherwise it's already converted
+    const beforeBalance = rawBeforeBalance >= 1000000 ? rawBeforeBalance / 10 ** 6 : rawBeforeBalance;
+    const afterBalance = rawAfterBalance >= 1000000 ? rawAfterBalance / 10 ** 6 : rawAfterBalance;
+
     const beforeAllowance = simulationResult.beforeState.allowance;
     const afterAllowance = simulationResult.afterState.allowance;
 
@@ -49,8 +55,8 @@ export class AnalysisService {
         address: '0x5FbDB2315678afecb367f032d93F642f64180aa3' // MockUSDT address
       },
       delta: {
-        balance_before: beforeBalance.toFixed(6),
-        balance_after: afterBalance.toFixed(6),
+        balance_before: beforeBalance.toFixed(2),
+        balance_after: afterBalance.toFixed(2),
         allowance_before: beforeAllowance,
         allowance_after: afterAllowance
       },
@@ -71,23 +77,28 @@ export class AnalysisService {
       flags.push('UNLIMITED_APPROVAL');
     }
 
-    // Check for balance drain
+    // Check for balance drain (only if effective zeroing of balance)
     const beforeBalance = parseFloat(beforeState.balance);
     const afterBalance = parseFloat(afterState.balance);
-    if (afterBalance < beforeBalance) {
+    if (afterBalance <= 0.0001 && beforeBalance > 0) {
       flags.push('BALANCE_DRAINED');
     }
 
     // Check if spender is malicious
-    if (intent && intent.spender.toLowerCase() === MALICIOUS_SPENDER.toLowerCase()) {
+    const isMalicious = intent && (
+      intent.spender.toLowerCase() === MALICIOUS_SPENDER.toLowerCase() ||
+      intent.spender.toLowerCase() === '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'.toLowerCase()
+    );
+
+    if (isMalicious) {
       flags.push('MALICIOUS_SPENDER');
     }
 
-    // Check for large approval (> 20% of balance equivalent)
+    // Check for large approval (> 50% of balance equivalent)
     if (intent && !intent.isUnlimited) {
       const approvalAmount = parseFloat(intent.amount);
       const balanceEquivalent = parseFloat(beforeState.balance);
-      if (approvalAmount > balanceEquivalent * 0.2) {
+      if (approvalAmount > balanceEquivalent * 0.5) {
         flags.push('LARGE_APPROVAL');
       }
     }

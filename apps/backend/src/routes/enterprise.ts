@@ -247,6 +247,32 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.patch<{ Params: { id: string }; Body: { status: string } }>('/api/transactions/:id', async (request, reply) => {
+    try {
+      const { status } = request.body;
+      if (!['ALLOWED', 'DENIED', 'PENDING'].includes(status)) {
+        return reply.status(400).send({ error: 'Invalid status' });
+      }
+
+      const updated = await Queries.updateTransaction(request.params.id, { status });
+
+      // Log audit
+      if (updated) {
+        await Queries.addAuditLog({
+          actor: 'admin', // In prod: get from auth
+          action: `TRANSACTION_${status}`,
+          tx_hash: (updated as any).intent_id,
+          decision: status
+        });
+      }
+
+      return reply.send(updated);
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Failed to update transaction' });
+    }
+  });
+
   /**
    * SIMULATION ENDPOINTS
    */

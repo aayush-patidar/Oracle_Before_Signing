@@ -50,8 +50,12 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         if (accounts.length > 0) {
             setAccount(accounts[0]);
             if (window.ethereum) {
-                const tempP = new ethers.BrowserProvider(window.ethereum);
-                await updateBalance(accounts[0], tempP);
+                try {
+                    const tempP = new ethers.BrowserProvider(window.ethereum);
+                    await updateBalance(accounts[0], tempP);
+                } catch (error) {
+                    console.error('Error updating balance after account change:', error);
+                }
             }
         } else {
             setAccount(null);
@@ -64,17 +68,23 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         setChainId(chainId);
         // Refresh provider on chain change
         if (window.ethereum) {
-            const newP = new ethers.BrowserProvider(window.ethereum);
-            setProvider(newP);
-            // We need to get the account again to update balance
-            // But usually account doesn't change on chain change, just balance might
-            // So we use the 'account' state? No, 'account' state is stale here if not in deps.
-            // Better to re-fetch accounts to be safe
-            newP.listAccounts().then(accounts => {
-                if (accounts.length > 0) {
-                    updateBalance(accounts[0].address, newP);
-                }
-            });
+            try {
+                const newP = new ethers.BrowserProvider(window.ethereum);
+                setProvider(newP);
+                // We need to get the account again to update balance
+                // But usually account doesn't change on chain change, just balance might
+                // So we use the 'account' state? No, 'account' state is stale here if not in deps.
+                // Better to re-fetch accounts to be safe
+                newP.listAccounts().then(accounts => {
+                    if (accounts.length > 0) {
+                        updateBalance(accounts[0].address, newP);
+                    }
+                }).catch(err => {
+                    console.warn('Failed to list accounts after chain change:', err);
+                });
+            } catch (err) {
+                console.error('Failed to recreate provider on chain change:', err);
+            }
         }
     }, [updateBalance]); // updateBalance is stable
 
@@ -97,9 +107,13 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     // Initialize state on mount
     useEffect(() => {
         if (window.ethereum) {
-            const p = new ethers.BrowserProvider(window.ethereum);
-            setProvider(p);
-            checkConnection(p);
+            try {
+                const p = new ethers.BrowserProvider(window.ethereum);
+                setProvider(p);
+                checkConnection(p);
+            } catch (error) {
+                console.error('Error initializing Web3 provider:', error);
+            }
 
             (window.ethereum as any).on('accountsChanged', handleAccountsChanged);
             (window.ethereum as any).on('chainChanged', handleChainChanged);
@@ -263,7 +277,9 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             const tx = await signer.sendTransaction({
                 to,
                 value: amountWei,
-                gasLimit: 30000 // Force gas limit to bypass estimateGas reverts on some Monad RPCs
+                // Gas limit 21000 is standard for ETH transfers.
+                // Using slightly higher to be safe on testnet, but avoid 30000 which might be arbitrary
+                gasLimit: 30000
             });
 
             console.log('⏳ Transaction submitted:', tx.hash);

@@ -18,6 +18,12 @@ export const chatRoutes: FastifyPluginAsync<{ runManager: RunManager }> = async 
       const paymentTx = request.headers['x-payment-tx'] as string;
       const config = getX402Config();
 
+      console.log(`📨 /api/chat Request:`, {
+        hasMessage: !!message,
+        paymentHeader: paymentTx || 'none',
+        url: request.url
+      });
+
       // 1. NoahAI Intent Parsing (FREE)
       const intentPreview = await runManager.parseIntentPreview(message);
 
@@ -72,5 +78,25 @@ export const chatRoutes: FastifyPluginAsync<{ runManager: RunManager }> = async 
         message: error.message || 'Failed to process request'
       });
     }
+  });
+
+  fastify.get<{
+    Querystring: { runId: string };
+  }>('/api/chat', async (request, reply) => {
+    const { runId } = request.query;
+    if (!runId) return reply.code(400).send({ error: 'Missing runId' });
+
+    const run = runManager.getRun(runId);
+    if (!run) return reply.code(404).send({ error: 'Run Not Found' });
+
+    if (run.result) {
+      return run.result;
+    }
+
+    // If no results yet, return status
+    return {
+      status: 'PROCESSING',
+      currentStage: run.currentStage
+    };
   });
 };

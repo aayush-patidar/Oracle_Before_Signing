@@ -10,8 +10,16 @@ const nextConfig = {
       },
     ];
   },
-  // Enable React strict mode for better debugging
-  reactStrictMode: true,
+
+  // Proxy /api requests to backend
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:3001/api/:path*',
+      },
+    ];
+  },
 
   // Enable React strict mode for better debugging
   reactStrictMode: true,

@@ -113,7 +113,7 @@ export class SimulationService {
     });
 
     // Check if we should simulate drain
-    const shouldDrain = this.shouldSimulateDrain(intent);
+    const shouldDrain = this.shouldSimulateDrain(intent, beforeState.balance);
 
     if (shouldDrain) {
       await this.simulateDrain();
@@ -144,25 +144,51 @@ export class SimulationService {
       allowance: '0'
     };
 
+    const approvalAmount = parseFloat(intent.amount);
+    const balanceAmount = parseFloat(beforeState.balance);
+
+    // Determine System Event Message
+    let description = `Approval for ${this.formatUSDTAmount(intent.amount)} USDT simulated`;
+
+    if (intent.isUnlimited) {
+      description = '🚨 Unlimited Approval Simulated';
+    } else if (approvalAmount >= balanceAmount) {
+      description = '🚨 Full Balance Drain Simulated (100%)';
+    } else if (approvalAmount > balanceAmount * 0.5) {
+      description = `⚠️ High Value Approval (>50%) Simulated`;
+    }
+
     const timeline: TimelineStep[] = [
       { block: 0, description: 'Initial state evaluated', timestamp: Date.now() },
-      { block: 1, description: `Approval for ${intent.amount} USDT simulated`, timestamp: Date.now() }
+      { block: 1, description, timestamp: Date.now() }
     ];
 
     let afterState = { ...beforeState, allowance: intent.amount };
 
-    // Identify if it's a "risky" transaction for the demo
-    // If approving the known malicious spender (even with case difference)
     const isRiskySpender = intent.spender.toLowerCase() === MALICIOUS_SPENDER.toLowerCase() ||
-      intent.spender.toLowerCase() === '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'.toLowerCase(); // Monad Spender
+      intent.spender.toLowerCase() === '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'.toLowerCase();
 
-    if (isRiskySpender && intent.isUnlimited) {
+    console.log(`[Simulation] Balance: ${balanceAmount}, Approval: ${approvalAmount}`);
+
+    // ALWAYS show potential balance impact for ANY approval
+    // Calculate what balance would be if the approved amount is spent
+    const potentialSpend = Math.min(balanceAmount, approvalAmount);
+    const remainingBalance = balanceAmount - potentialSpend;
+    afterState.balance = remainingBalance.toString();
+
+    console.log(`[Simulation] Potential Spend: ${potentialSpend}, Remaining: ${remainingBalance}`);
+
+    // Only show drain warning for risky spenders with significant amounts (>= 10% of balance)
+    const isSignificant = approvalAmount >= (balanceAmount * 0.1);
+
+    if (isRiskySpender && (intent.isUnlimited || isSignificant)) {
+      const drainUSDT = this.formatUSDTAmount(potentialSpend.toString());
+
       timeline.push({
         block: 18,
-        description: '🚨 POTENTIAL DRAIN DETECTED: Spender drains 1000 USDT',
+        description: `🚨 POTENTIAL DRAIN DETECTED: Spender drains ${drainUSDT} USDT (Authorized Limit)`,
         timestamp: Date.now()
       });
-      afterState.balance = '0'; // Drained!
     }
 
     return {
@@ -198,8 +224,15 @@ export class SimulationService {
     await tx.wait();
   }
 
-  private shouldSimulateDrain(intent: Intent): boolean {
-    return intent.spender.toLowerCase() === MALICIOUS_SPENDER.toLowerCase() && intent.isUnlimited;
+  private shouldSimulateDrain(intent: Intent, balance: string): boolean {
+    const isRiskySpender = intent.spender.toLowerCase() === MALICIOUS_SPENDER.toLowerCase() ||
+      intent.spender.toLowerCase() === '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb'.toLowerCase();
+
+    const approvalAmount = parseFloat(intent.amount);
+    const balanceAmount = parseFloat(balance);
+    const isSignificant = approvalAmount >= (balanceAmount * 0.1);
+
+    return isRiskySpender && (intent.isUnlimited || isSignificant);
   }
 
   private async simulateDrain(): Promise<void> {
@@ -242,5 +275,18 @@ export class SimulationService {
       balance: balance.toString(),
       allowance: allowance.toString()
     };
+  }
+
+  private formatUSDTAmount(amount: string): string {
+    const numAmount = parseFloat(amount);
+
+    // If amount is in wei format (>= 1000000), convert to USDT
+    const usdtAmount = numAmount >= 1000000 ? numAmount / 10 ** 6 : numAmount;
+
+    // Format with thousand separators and 2 decimal places
+    return usdtAmount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 }

@@ -124,17 +124,17 @@ export default function ApprovalsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Approvals & Allowances</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Approvals & Allowances</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Monitor token approvals and manage spender permissions
         </p>
       </div>
 
       {/* Risk Summary */}
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300">
@@ -234,96 +234,100 @@ export default function ApprovalsPage() {
               ))}
             </div>
           ) : allowances.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-700 hover:bg-transparent">
-                    <TableHead className="w-10">
-                      <input
-                        type="checkbox"
-                        checked={(allowances || []).length > 0 && selectedAllowances.size === allowances.length}
-                        onChange={selectAll}
-                        className="rounded"
-                      />
-                    </TableHead>
-                    <TableHead className="text-gray-300">Token</TableHead>
-                    <TableHead className="text-gray-300">Spender</TableHead>
-                    <TableHead className="text-gray-300">Amount</TableHead>
-                    <TableHead className="text-gray-300">Risk</TableHead>
-                    <TableHead className="text-gray-300">Last Updated</TableHead>
-                    <TableHead className="text-gray-300">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allowances.map((allowance) => (
-                    <TableRow
-                      key={allowance.id}
-                      className={`border-gray-700 hover:bg-gray-700/50 ${selectedAllowances.has(allowance.id) ? 'bg-gray-700/30' : ''
-                        }`}
-                    >
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={selectedAllowances.has(allowance.id)}
-                          onChange={() => toggleSelection(allowance.id)}
-                          className="rounded"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-semibold text-white">{allowance.token}</p>
-                          <p className="text-xs text-gray-400 font-mono">
-                            {allowance.token_address.substring(0, 10)}...
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-semibold text-white">{allowance.spender}</p>
-                          <p className="text-xs text-gray-400 font-mono">
-                            {allowance.spender_address.substring(0, 10)}...
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        <div className="text-gray-300">
-                          {allowance.allowance_formatted}
-                        </div>
-                        {allowance.amount.includes('115792') && (
-                          <Badge className="mt-1 bg-red-500/20 text-red-400">
-                            MAX_UINT
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getRiskColor(allowance.risk_score)}>
-                          {getRiskLabel(allowance.risk_score)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-400 text-sm">
-                        {new Date(allowance.last_updated).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-400 hover:text-red-300"
-                          onClick={() => handleRevoke(allowance.id)}
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <div className="inline-block min-w-full align-middle">
+                <div className="overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-gray-700 hover:bg-transparent">
+                        <TableHead className="w-10">
+                          <input
+                            type="checkbox"
+                            checked={(allowances || []).length > 0 && selectedAllowances.size === allowances.length}
+                            onChange={selectAll}
+                            className="rounded"
+                          />
+                        </TableHead>
+                        <TableHead className="text-gray-300">Token</TableHead>
+                        <TableHead className="text-gray-300">Spender</TableHead>
+                        <TableHead className="text-gray-300">Amount</TableHead>
+                        <TableHead className="text-gray-300">Risk</TableHead>
+                        <TableHead className="text-gray-300">Last Updated</TableHead>
+                        <TableHead className="text-gray-300">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allowances.map((allowance) => (
+                        <TableRow
+                          key={allowance.id}
+                          className={`border-gray-700 hover:bg-gray-700/50 ${selectedAllowances.has(allowance.id) ? 'bg-gray-700/30' : ''
+                            }`}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-gray-400"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedAllowances.has(allowance.id)}
+                              onChange={() => toggleSelection(allowance.id)}
+                              className="rounded"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-semibold text-white">{allowance.token}</p>
+                              <p className="text-xs text-gray-400 font-mono">
+                                {allowance.token_address.substring(0, 10)}...
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-semibold text-white">{allowance.spender}</p>
+                              <p className="text-xs text-gray-400 font-mono">
+                                {allowance.spender_address.substring(0, 10)}...
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            <div className="text-gray-300">
+                              {allowance.allowance_formatted}
+                            </div>
+                            {allowance.amount.includes('115792') && (
+                              <Badge className="mt-1 bg-red-500/20 text-red-400">
+                                MAX_UINT
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRiskColor(allowance.risk_score)}>
+                              {getRiskLabel(allowance.risk_score)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-400 text-sm">
+                            {new Date(allowance.last_updated).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-400 hover:text-red-300"
+                              onClick={() => handleRevoke(allowance.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-400"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">
@@ -340,7 +344,7 @@ export default function ApprovalsPage() {
           <CardTitle className="text-white">Risk Assessment Factors</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 bg-red-500 rounded-full" />

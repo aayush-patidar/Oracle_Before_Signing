@@ -48,6 +48,7 @@ interface EnterpriseLayoutProps {
 export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { chainId, switchNetwork } = useWeb3();
   const { role, permissions, setRole } = useRole();
   const { policyMode } = usePolicy();
@@ -126,37 +127,56 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-100">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
+      {/* Mobile Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Mobile Drawer + Desktop Fixed */}
       <div
         className={`${sidebarOpen ? 'w-64' : 'w-20'
-          } bg-gray-950 border-r border-gray-800 transition-all duration-300 flex flex-col overflow-hidden`}
+          } bg-gray-950 border-r border-gray-800 transition-all duration-300 flex flex-col overflow-hidden
+        fixed lg:relative inset-y-0 left-0 z-50 
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-gray-800 flex items-center justify-between">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-blue-500" />
-              <span className="font-bold text-lg">OBS</span>
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+              <span className="font-bold text-base sm:text-lg">OBS</span>
             </div>
           )}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-gray-400 hover:text-gray-300"
+            className="text-gray-400 hover:text-gray-300 hidden lg:flex"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+          {/* Mobile close button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileMenuOpen(false)}
+            className="text-gray-400 hover:text-gray-300 lg:hidden"
+          >
+            <X className="w-5 h-5" />
           </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 sm:py-6 space-y-2 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                 <Button
                   variant={active ? 'default' : 'ghost'}
                   className={`w-full justify-start gap-3 ${active
@@ -199,46 +219,66 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-gray-950 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-white">OBS Security Console</h1>
-            <Badge variant="outline" className={`
-              ${policyMode === 'ENFORCE'
-                ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                : 'bg-green-500/20 text-green-400 border-green-500/30'
-              }
-            `}>
+        <header className="bg-gray-950 border-b border-gray-800 px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-gray-400 hover:text-gray-300 lg:hidden flex-shrink-0"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+
+            <h1 className="text-sm sm:text-lg md:text-xl font-bold text-white truncate">
+              OBS Security Console
+            </h1>
+            <Badge
+              variant="outline"
+              className={`hidden sm:inline-flex ${policyMode === 'ENFORCE'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                  : 'bg-green-500/20 text-green-400 border-green-500/30'
+                }`}
+            >
               {policyMode === 'ENFORCE' ? 'Enforce Mode' : 'Monitor Mode'}
             </Badge>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0">
             {/* Custom Network Selector */}
-            <div className="flex items-center gap-2 relative">
+            <div className="hidden md:flex items-center gap-2 relative">
               <span className="text-sm text-gray-400">Network:</span>
               <div className="relative group">
                 <button
-                  className="flex items-center justify-between w-44 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white hover:bg-gray-750 transition-all font-medium"
+                  className="flex items-center justify-between w-32 sm:w-44 bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm text-white hover:bg-gray-750 transition-all font-medium"
                   onClick={() => {
                     const dropdown = document.getElementById('network-dropdown');
                     dropdown?.classList.toggle('hidden');
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${chainIdToName(chainId) === 'localhost' ? 'bg-blue-400' :
-                      chainIdToName(chainId) === 'monad' ? 'bg-purple-400' :
-                        chainIdToName(chainId) === 'sepolia' ? 'bg-yellow-400' :
-                          'bg-green-400'
-                      }`} />
-                    <span className="capitalize">{chainIdToName(chainId)}</span>
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${chainIdToName(chainId) === 'localhost'
+                          ? 'bg-blue-400'
+                          : chainIdToName(chainId) === 'monad'
+                            ? 'bg-purple-400'
+                            : chainIdToName(chainId) === 'sepolia'
+                              ? 'bg-yellow-400'
+                              : 'bg-green-400'
+                        }`}
+                    />
+                    <span className="capitalize truncate">{chainIdToName(chainId)}</span>
                   </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                 </button>
 
                 <div
                   id="network-dropdown"
                   className="absolute top-full right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-[60] py-1 hidden animate-in fade-in zoom-in-95 duration-150"
-                  onMouseLeave={() => document.getElementById('network-dropdown')?.classList.add('hidden')}
+                  onMouseLeave={() =>
+                    document.getElementById('network-dropdown')?.classList.add('hidden')
+                  }
                 >
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors flex items-center gap-2"
@@ -284,32 +324,39 @@ export default function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
               </div>
             </div>
 
-            {/* RPC Status */}
-            <div className="flex items-center gap-2">
+            {/* RPC Status - Hidden on mobile */}
+            <div className="hidden sm:flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-gray-400">RPC Connected</span>
+              <span className="text-xs sm:text-sm text-gray-400 hidden md:inline">RPC Connected</span>
             </div>
 
             {/* Wallet */}
             <WalletConnect />
 
-
-            {/* Export */}
+            {/* Export - Hidden on small mobile */}
             {permissions.export && (
               <Button
                 variant="outline"
                 size="sm"
-                className="border-gray-700 gap-2"
+                className="border-gray-700 gap-2 hidden sm:flex"
                 onClick={handleExport}
                 disabled={isExporting}
               >
-                {isExporting ? <Clock className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Export
+                {isExporting ? (
+                  <Clock className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span className="hidden md:inline">Export</span>
               </Button>
             )}
 
-            {/* Logout */}
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-300">
+            {/* Logout - Hidden on mobile */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-gray-300 hidden md:flex"
+            >
               <LogOut className="w-4 h-4" />
             </Button>
           </div>

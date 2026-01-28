@@ -65,59 +65,59 @@ export default function ChatPage() {
                 }
             `}</style>
 
-            <div className="max-w-[1800px] mx-auto w-full flex-1 flex flex-col min-h-0 p-6 md:p-8 lg:p-10 pt-0 md:pt-0 lg:pt-0">
+            <div className="max-w-[1800px] mx-auto w-full flex-1 flex flex-col min-h-0 p-4 sm:p-6 md:p-8 lg:p-10 pt-0 md:pt-0 lg:pt-0">
 
                 {/* Enterprise Header - Strictly Fixed Height */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 py-8 flex-shrink-0">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 border-b border-white/5 py-6 sm:py-8 flex-shrink-0">
                     <div>
-                        <div className="flex items-center gap-4 mb-2">
-                            <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-                                <Brain className="w-6 h-6 text-blue-400" />
+                        <div className="flex items-center gap-3 sm:gap-4 mb-2">
+                            <div className="p-1.5 sm:p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                                <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                             </div>
-                            <h1 className="text-3xl font-black text-white tracking-tight uppercase">
+                            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
                                 NoahAI <span className="text-blue-500">Oracle</span>
                             </h1>
                         </div>
-                        <p className="text-slate-500 text-[12px] font-black uppercase tracking-[0.3em] ml-1">
+                        <p className="text-slate-500 text-[10px] sm:text-[12px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] ml-1">
                             High-Fidelity Adversarial Reasoning • System Terminal v4.2.0
                         </p>
                     </div>
-                    <div className="flex gap-3">
-                        <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-md">
-                            <Activity className="w-4 h-4 text-emerald-400" />
-                            <span className="text-[11px] font-black uppercase text-emerald-400 tracking-[0.2em]">Operational Health: 100%</span>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-md">
+                            <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
+                            <span className="text-[9px] sm:text-[11px] font-black uppercase text-emerald-400 tracking-[0.15em] sm:tracking-[0.2em]">Operational Health: 100%</span>
                         </div>
-                        <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10 backdrop-blur-md">
-                            <Shield className="w-4 h-4 text-blue-400" />
-                            <span className="text-[11px] font-black uppercase text-blue-400 tracking-[0.2em]">Adversarial Enclave: Secure</span>
+                        <div className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-blue-500/5 border border-blue-500/10 backdrop-blur-md">
+                            <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
+                            <span className="text-[9px] sm:text-[11px] font-black uppercase text-blue-400 tracking-[0.15em] sm:tracking-[0.2em]">Adversarial Enclave: Secure</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Main Viewport Grid - Balanced Top-Level Alignment */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 flex-1 min-h-0 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 flex-1 min-h-0 py-6 sm:py-8">
                     {/* Security Terminal Column */}
-                    <div className="lg:col-span-4 flex flex-col min-h-0 h-full">
-                        <div className="flex-1 overflow-hidden relative group rounded-[3rem] bg-[#0b1222]/80 border border-white/5 shadow-2xl backdrop-blur-xl">
-                            <div className="absolute -inset-0.5 bg-gradient-to-b from-blue-500/20 to-transparent rounded-[3rem] opacity-0 group-hover:opacity-100 transition duration-1000 blur-sm pointer-events-none" />
+                    <div className="lg:col-span-4 flex flex-col min-h-0 h-full min-h-[400px] lg:min-h-0">
+                        <div className="flex-1 overflow-hidden relative group rounded-[2rem] sm:rounded-[3rem] bg-[#0b1222]/80 border border-white/5 shadow-2xl backdrop-blur-xl">
+                            <div className="absolute -inset-0.5 bg-gradient-to-b from-blue-500/20 to-transparent rounded-[2rem] sm:rounded-[3rem] opacity-0 group-hover:opacity-100 transition duration-1000 blur-sm pointer-events-none" />
                             <ChatWindow onNewRun={handleNewRun} onStreamUpdate={handleStreamUpdate} />
                         </div>
                     </div>
 
                     {/* Simulation Analysis Column */}
-                    <div className="lg:col-span-8 flex flex-col min-h-0 h-full overflow-hidden">
+                    <div className="lg:col-span-8 flex flex-col min-h-0 h-full overflow-hidden min-h-[400px] lg:min-h-0">
                         {!currentRun ? (
-                            <div className="flex-1 bg-slate-900/10 border-2 border-dashed border-slate-800 rounded-[3rem] flex flex-col items-center justify-center text-center p-16 group transition-all hover:bg-slate-900/20">
-                                <div className="w-24 h-24 rounded-[2.5rem] bg-slate-950 flex items-center justify-center border border-white/5 mb-10 shadow-2xl transition-all duration-1000 group-hover:rotate-[360deg]">
-                                    <Shield className="w-12 h-12 text-slate-800 group-hover:text-blue-500/70 transition-colors" />
+                            <div className="flex-1 bg-slate-900/10 border-2 border-dashed border-slate-800 rounded-[2rem] sm:rounded-[3rem] flex flex-col items-center justify-center text-center p-8 sm:p-16 group transition-all hover:bg-slate-900/20">
+                                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[1.5rem] sm:rounded-[2.5rem] bg-slate-950 flex items-center justify-center border border-white/5 mb-6 sm:mb-10 shadow-2xl transition-all duration-1000 group-hover:rotate-[360deg]">
+                                    <Shield className="w-8 h-8 sm:w-12 sm:h-12 text-slate-800 group-hover:text-blue-500/70 transition-colors" />
                                 </div>
-                                <h2 className="text-2xl font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Baseline Link Inactive</h2>
-                                <p className="text-slate-600 max-w-sm text-sm leading-relaxed font-bold uppercase tracking-widest opacity-60">
+                                <h2 className="text-xl sm:text-2xl font-black text-slate-400 uppercase tracking-[0.2em] sm:tracking-[0.3em] mb-3 sm:mb-4">Baseline Link Inactive</h2>
+                                <p className="text-slate-600 max-w-sm text-xs sm:text-sm leading-relaxed font-bold uppercase tracking-widest opacity-60">
                                     Awaiting cryptographic intent signature. <br />Terminal link required for modeling.
                                 </p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 flex-1 min-h-0 h-full overflow-hidden">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 flex-1 min-h-0 h-full overflow-hidden">
                                 {/* Predetermined Events Card */}
                                 <Card className="bg-[#0f172a]/70 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden rounded-[2.5rem] flex flex-col h-full min-h-0">
                                     <CardHeader className="border-b border-white/5 bg-slate-900/30 px-8 py-5 flex-shrink-0">
@@ -153,7 +153,10 @@ export default function ChatPage() {
                                                     <div className="flex items-stretch justify-between gap-4">
                                                         <div className="flex-1 bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                                                             <p className="text-[8px] text-slate-600 font-black uppercase mb-2 tracking-widest">Base Ledger</p>
-                                                            <p className="text-xl font-mono text-slate-400 font-black tracking-tighter">{finalResult.reality_delta.delta.balance_before}</p>
+                                                            <p className="text-xl font-mono text-slate-400 font-black tracking-tighter">
+                                                                {parseFloat(finalResult.reality_delta.delta.balance_before).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </p>
+                                                            <p className="text-[8px] text-slate-600 font-bold uppercase mt-1 tracking-wider">USDT</p>
                                                         </div>
                                                         <div className="flex flex-col items-center justify-center">
                                                             <div className="w-9 h-9 rounded-full bg-slate-950 flex items-center justify-center border border-white/5 shadow-lg">
@@ -161,20 +164,21 @@ export default function ChatPage() {
                                                             </div>
                                                         </div>
                                                         <div className={`flex-1 p-5 rounded-2xl border flex flex-col items-center justify-center transition-all duration-700 ${isNaN(parseFloat(finalResult.reality_delta.delta.balance_after))
-                                                                ? 'bg-amber-500/5 border-amber-500/20'
-                                                                : parseFloat(finalResult.reality_delta.delta.balance_after) < parseFloat(finalResult.reality_delta.delta.balance_before)
-                                                                    ? 'bg-rose-500/10 border-rose-500/20'
-                                                                    : 'bg-emerald-500/5 border-emerald-500/20'
+                                                            ? 'bg-amber-500/5 border-amber-500/20'
+                                                            : parseFloat(finalResult.reality_delta.delta.balance_after) < parseFloat(finalResult.reality_delta.delta.balance_before)
+                                                                ? 'bg-rose-500/10 border-rose-500/20'
+                                                                : 'bg-emerald-500/5 border-emerald-500/20'
                                                             }`}>
                                                             <p className="text-[9px] text-slate-600 font-black uppercase mb-2 tracking-widest">Post-Event Delta</p>
                                                             <p className={`text-xl font-mono font-black tracking-tighter ${isNaN(parseFloat(finalResult.reality_delta.delta.balance_after))
-                                                                    ? 'text-amber-500'
-                                                                    : parseFloat(finalResult.reality_delta.delta.balance_after) < parseFloat(finalResult.reality_delta.delta.balance_before)
-                                                                        ? 'text-rose-500'
-                                                                        : 'text-emerald-500'
+                                                                ? 'text-amber-500'
+                                                                : parseFloat(finalResult.reality_delta.delta.balance_after) < parseFloat(finalResult.reality_delta.delta.balance_before)
+                                                                    ? 'text-rose-500'
+                                                                    : 'text-emerald-500'
                                                                 }`}>
-                                                                {finalResult.reality_delta.delta.balance_after}
+                                                                {parseFloat(finalResult.reality_delta.delta.balance_after).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                             </p>
+                                                            <p className="text-[8px] text-slate-600 font-bold uppercase mt-1 tracking-wider">USDT</p>
                                                         </div>
                                                     </div>
                                                 </div>

@@ -30,29 +30,28 @@ export async function verifyPaymentTx(txHash: string): Promise<{ ok: boolean; pa
         const config = getX402Config();
         const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
-        // Retry fetching TX a few times to handle RPC indexing delays
+        // Retry fetching TX to handle RPC indexing delays (15s timeout)
         let tx = null;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 15; i++) {
             tx = await provider.getTransaction(txHash);
             if (tx) break;
             await new Promise(r => setTimeout(r, 1000)); // Wait 1s
         }
 
         if (!tx) {
-            return { ok: false, reason: 'TX_NOT_FOUND' };
+            console.warn(`⚠️ x402: TX not found after 15s. Hash: ${txHash} on RPC: ${config.rpcUrl}`);
+            return { ok: false, reason: 'TRANSACTION_NOT_FOUND_ON_CHAIN' };
         }
 
-        // For demo speed, we skip waiting for full confirmation if we see it in mempool
-        // This makes the UI feel instant
-        /* 
+        // Check if transaction was reverted
         try {
-            await provider.waitForTransaction(txHash, 1, 5000); 
-        } catch (e) {} 
-        */
-        // Let's check status if mined
-        const receipt = await provider.getTransactionReceipt(txHash);
-        if (receipt && receipt.status === 0) {
-            return { ok: false, reason: 'TX_REVERTED' };
+            const receipt = await provider.getTransactionReceipt(txHash);
+            if (receipt && receipt.status === 0) {
+                console.warn(`⚠️ x402: TX reverted: ${txHash}`);
+                return { ok: false, reason: 'TX_EXECUTION_REVERTED' };
+            }
+        } catch (e) {
+            console.warn(`⚠️ x402: Error fetching receipt: ${e}`);
         }
 
         // Validate Receiver

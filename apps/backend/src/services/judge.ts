@@ -43,18 +43,11 @@ export class JudgmentService {
       return true;
     }
 
-    // DENY if balance was drained in simulation
-    const beforeBalance = parseFloat(realityDelta.delta.balance_before);
-    const afterBalance = parseFloat(realityDelta.delta.balance_after);
-    if (afterBalance < beforeBalance) {
-      return true;
-    }
-
-    // DENY if approval > 20% of balance equivalent
+    // DENY if approval > 50% of balance equivalent
     if (!intent.isUnlimited) {
-      const approvalAmount = parseFloat(intent.amount) / 10**6; // Convert to USDT
+      const approvalAmount = parseFloat(intent.amount) / 10 ** 6; // Convert to USDT
       const balance = parseFloat(realityDelta.delta.balance_before);
-      if (approvalAmount > balance * 0.2) {
+      if (approvalAmount > balance * 0.5) {
         return true;
       }
     }
@@ -65,17 +58,17 @@ export class JudgmentService {
   private shouldAllow(intent: Intent, realityDelta: RealityDelta): boolean {
     // ALLOW if small amount (<= 10 USDT)
     if (!intent.isUnlimited) {
-      const amount = parseFloat(intent.amount) / 10**6; // Convert to USDT
+      const amount = parseFloat(intent.amount) / 10 ** 6; // Convert to USDT
       if (amount <= 10) {
         return true;
       }
     }
 
-    // ALLOW if spender is not malicious and no drain occurred
-    const balanceDrained = parseFloat(realityDelta.delta.balance_after) <
-                          parseFloat(realityDelta.delta.balance_before);
+    // ALLOW if spender is not malicious and no critical risk flags
+    const hasCriticalRisks = realityDelta.risk_flags.includes('MALICIOUS_SPENDER') ||
+      realityDelta.risk_flags.includes('UNLIMITED_APPROVAL');
 
-    if (intent.spender.toLowerCase() !== MALICIOUS_SPENDER.toLowerCase() && !balanceDrained) {
+    if (intent.spender.toLowerCase() !== MALICIOUS_SPENDER.toLowerCase() && !hasCriticalRisks) {
       return true;
     }
 
@@ -98,14 +91,14 @@ export class JudgmentService {
       question = 'This gives unlimited access to your tokens forever. Are you sure this is necessary?';
       overrideAllowed = false; // No override for unlimited
     } else if (realityDelta.risk_flags.includes('BALANCE_DRAINED')) {
-      reasoning.push('Simulation shows balance drain');
-      reasoning.push('Funds would be lost if spender is compromised');
-      question = 'The simulation shows your balance going to zero. Do you understand this risk?';
-      overrideAllowed = false;
+      reasoning.push('Simulation shows complete balance drain');
+      reasoning.push('All funds will be transferrable');
+      question = 'The simulation shows your balance going to zero. This action is blocked for your safety.';
+      overrideAllowed = false; // BLOCK full balance drains as requested
     } else if (realityDelta.risk_flags.includes('LARGE_APPROVAL')) {
-      reasoning.push('Large approval amount detected');
+      reasoning.push('Large approval amount detected (> 50%)');
       reasoning.push('Exceeds safe threshold for token approvals');
-      question = 'This approval is unusually large. Have you verified the spender\'s legitimacy?';
+      question = 'This approval is for more than 50% of your balance. Have you verified the spender\'s legitimacy?';
       overrideAllowed = true; // Allow override for large but not unlimited
     }
 

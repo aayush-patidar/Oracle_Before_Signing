@@ -25,10 +25,14 @@ interface Transaction {
   risk_level?: string;
 }
 
+import { useRouter } from 'next/navigation';
+
 export default function TransactionsPage() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchTransactions();
@@ -45,6 +49,34 @@ export default function TransactionsPage() {
       console.error('Failed to fetch transactions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!selectedTx) return;
+    setProcessing(true);
+
+    try {
+      // Use _id if available (MongoDB), otherwise id or intent_id
+      const txId = (selectedTx as any)._id || selectedTx.id || selectedTx.intent_id;
+
+      const response = await fetch(`/api/transactions/${txId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (response.ok) {
+        // Update local state and close drawer
+        await fetchTransactions();
+        setSelectedTx(null);
+      } else {
+        console.error('Failed to update transaction status');
+      }
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -182,7 +214,7 @@ export default function TransactionsPage() {
 
       {/* Transaction Detail Drawer */}
       {selectedTx && (
-        <Card className="bg-gray-800 border-gray-700 fixed bottom-0 right-0 w-96 h-screen rounded-none border-l">
+        <Card className="bg-gray-800 border-gray-700 fixed bottom-0 right-0 w-96 h-screen rounded-none border-l shadow-2xl z-50">
           <CardHeader className="border-b border-gray-700">
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Transaction Details</CardTitle>
@@ -207,7 +239,7 @@ export default function TransactionsPage() {
             {/* Intent ID */}
             <div>
               <h3 className="text-sm font-semibold text-gray-300 mb-2">Intent ID</h3>
-              <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400">
+              <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400 break-all">
                 {selectedTx.id || (selectedTx as any).intent_id}
               </p>
             </div>
@@ -215,7 +247,7 @@ export default function TransactionsPage() {
             {/* From Address */}
             <div>
               <h3 className="text-sm font-semibold text-gray-300 mb-2">From</h3>
-              <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400">
+              <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400 break-all">
                 {selectedTx.from_address}
               </p>
             </div>
@@ -223,7 +255,7 @@ export default function TransactionsPage() {
             {/* To Address */}
             <div>
               <h3 className="text-sm font-semibold text-gray-300 mb-2">To</h3>
-              <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400">
+              <p className="font-mono text-xs bg-gray-900 p-2 rounded text-gray-400 break-all">
                 {selectedTx.to_address}
               </p>
             </div>
@@ -245,15 +277,25 @@ export default function TransactionsPage() {
             {/* Actions */}
             {selectedTx.status === 'PENDING' && (
               <div className="space-y-2 pt-4 border-t border-gray-700">
-                <Button className="w-full bg-green-600 hover:bg-green-700">
-                  Approve
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => handleUpdateStatus('ALLOWED')}
+                  disabled={processing}
+                >
+                  {processing ? 'Processing...' : 'Approve'}
                 </Button>
-                <Button className="w-full bg-red-600 hover:bg-red-700" variant="secondary">
-                  Deny
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700"
+                  variant="secondary"
+                  onClick={() => handleUpdateStatus('DENIED')}
+                  disabled={processing}
+                >
+                  {processing ? 'Processing...' : 'Deny'}
                 </Button>
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700"
                   variant="secondary"
+                  onClick={() => router.push('/enterprise/chat')}
                 >
                   Simulate
                 </Button>

@@ -51,14 +51,12 @@ export const initializeDatabase = async (retries = 2): Promise<void> => {
 };
 
 const seedMockDatabase = async () => {
-  mockStore.contracts = [
-    { _id: 'm1', address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', name: 'Dai Stablecoin', trust_level: 'TRUSTED', risk_score: 5, addedAt: new Date().toISOString() },
-    { _id: 'm2', address: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512', name: 'Malicious Spender', trust_level: 'MALICIOUS', risk_score: 95, addedAt: new Date().toISOString() }
-  ];
+  // Only seed essential policies, no static transactions or alerts
   mockStore.policies = [
     { _id: 'p1', name: 'Block Unlimited Approvals', enabled: true, mode: 'ENFORCE', rule_type: 'UNLIMITED_APPROVAL', severity: 'CRITICAL' },
     { _id: 'p2', name: 'Malicious Contract Detection', enabled: true, mode: 'ENFORCE', rule_type: 'MALICIOUS_CONTRACT', severity: 'CRITICAL' }
   ];
+  // Contracts, transactions, and alerts start empty - only populated when user performs actions
 };
 
 export const seedDatabase = async () => {
@@ -139,6 +137,14 @@ export const Queries = {
       return newT;
     }
     return await Models.Transaction.create(t);
+  },
+  updateTransaction: async (id: string, updates: any) => {
+    if (useMock) {
+      const tx = mockStore.transactions.find((t: any) => t._id === id || t.id === id);
+      if (tx) { Object.assign(tx, updates); }
+      return tx;
+    }
+    return await Models.Transaction.findByIdAndUpdate(id, updates, { new: true });
   },
 
   getAlerts: async (l = 100) => useMock ? mockStore.alerts.slice(0, l) : await Models.Alert.find().sort({ createdAt: -1 }).limit(l),
