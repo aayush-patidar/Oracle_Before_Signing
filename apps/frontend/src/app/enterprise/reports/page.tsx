@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/table';
 
 interface SimulationReport {
-  id: number;
+  id?: string;
+  _id?: string;
   report_id: string;
   transaction_id: string;
   decision: string;
@@ -169,7 +170,7 @@ export default function ReportsPage() {
                 <TableBody>
                   {reports.map((report) => (
                     <TableRow
-                      key={report.id}
+                      key={report._id || report.id || report.report_id}
                       className="border-gray-700 hover:bg-gray-700/50"
                     >
                       <TableCell className="font-mono text-sm text-gray-300">

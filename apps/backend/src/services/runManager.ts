@@ -170,8 +170,22 @@ export class RunManager {
             severity: severity
           });
           console.log('✅ Transaction saved to dashboard');
+
+          // Save Simulation Report
+          await Queries.addSimulation({
+            report_id: uuidv4(),
+            transaction_id: runId,
+            decision: status, // ALLOWED, DENIED, PENDING
+            balance_before: realityDelta.delta.balance_before,
+            balance_after: realityDelta.delta.balance_after,
+            allowance_before: realityDelta.delta.allowance_before,
+            allowance_after: realityDelta.delta.allowance_after,
+            delta_summary: judgment.reasoning_bullets.join('; ') || 'No specific risks detected.'
+          });
+          console.log('✅ Simulation report saved');
+
         } catch (dbError) {
-          console.error('Failed to save transaction to DB:', dbError);
+          console.error('Failed to save transaction/simulation to DB:', dbError);
         }
       }
 
