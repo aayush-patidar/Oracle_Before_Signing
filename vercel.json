@@ -1,12 +1,6 @@
 {
-  "buildCommand": "npm run build --workspace=apps/frontend",
+  "buildCommand": "npm --prefix apps/frontend run build",
+  "installCommand": "npm --prefix apps/frontend install",
   "outputDirectory": "apps/frontend/.next",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
-    }
-  ]
+  "framework": "nextjs"
 }
