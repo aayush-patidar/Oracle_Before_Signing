@@ -208,34 +208,51 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  fastify.post<{ Body: TransactionBody }>('/api/transactions', async (request, reply) => {
+  fastify.post<{ Body: any }>('/api/transactions', async (request, reply) => {
     try {
-      const { intent_id, from_address, to_address, data, value, function_name } = request.body;
-
-      if (!intent_id || !from_address || !to_address) {
-        return reply.status(400).send({ error: 'Missing required fields' });
-      }
-
-      await Queries.addTransaction({
+      const {
         intent_id,
         from_address,
         to_address,
         data,
         value,
-        function_name
+        function_name,
+        status,
+        severity,
+        network
+      } = request.body;
+
+      // Validate required fields
+      if (!from_address || !to_address) {
+        return reply.status(400).send({ error: 'Missing required fields: from_address and to_address' });
+      }
+
+      // Generate intent_id if not provided
+      const txIntentId = intent_id || `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      await Queries.addTransaction({
+        intent_id: txIntentId,
+        from_address,
+        to_address,
+        data: data || '',
+        value: value || '0',
+        function_name: function_name || 'unknown',
+        status: status || 'PENDING',
+        severity: severity || 'MEDIUM',
+        network: network || 'unknown'
       });
 
       // Add audit log
       await Queries.addAuditLog({
         actor: from_address,
         action: 'TRANSACTION_CREATED',
-        tx_hash: intent_id,
-        decision: 'PENDING'
+        tx_hash: txIntentId,
+        decision: status || 'PENDING'
       });
 
       return reply.status(201).send({
-        intent_id,
-        status: 'PENDING',
+        intent_id: txIntentId,
+        status: status || 'PENDING',
         message: 'Transaction added to queue'
       });
     } catch (error: any) {

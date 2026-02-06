@@ -17,7 +17,7 @@ const mockStore: any = {
   simulations: []
 };
 
-export let useMock = false;
+export let useMock = process.env.FORCE_MOCK_DB === 'true' || false;
 
 export const isDatabaseReady = () => {
   return useMock || mongoose.connection.readyState === 1;
@@ -72,6 +72,11 @@ export const seedDatabase = async () => {
     }
   } catch (e) { }
 };
+
+// Query helpers
+// Simple in-memory cache
+let dashboardCache: { data: any; timestamp: number } | null = null;
+const CACHE_TTL = 5000; // 5 seconds cache
 
 // Query helpers
 export const Queries = {
@@ -198,6 +203,11 @@ export const Queries = {
   },
 
   getDashboardStats: async () => {
+    // Check cache first (skip for mock)
+    if (!useMock && dashboardCache && (Date.now() - dashboardCache.timestamp < CACHE_TTL)) {
+      return dashboardCache.data;
+    }
+
     if (useMock) {
       return {
         totalTransactions: mockStore.transactions.length,
@@ -226,7 +236,7 @@ export const Queries = {
       Models.Alert.find().sort({ createdAt: -1 }).limit(5)
     ]);
 
-    return {
+    const stats = {
       totalTransactions: txCount,
       pendingTransactions: pendingCount,
       allowedTransactions: allowedCount,
@@ -239,5 +249,9 @@ export const Queries = {
       maliciousContracts: contracts.filter(c => c.trust_level === 'MALICIOUS').length,
       recentAlerts: recentAlerts || []
     };
+
+    // Update cache
+    dashboardCache = { data: stats, timestamp: Date.now() };
+    return stats;
   }
 };

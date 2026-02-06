@@ -65,8 +65,8 @@ export default function OverviewPage() {
   useEffect(() => {
     fetchDashboardStats();
 
-    // Poll for updates every 3 seconds to ensure live reflection of Chat actions
-    const interval = setInterval(fetchDashboardStats, 3000);
+    // Poll for updates every 10 seconds (optimized for performance)
+    const interval = setInterval(fetchDashboardStats, 10000);
     return () => clearInterval(interval);
   }, []);
 
