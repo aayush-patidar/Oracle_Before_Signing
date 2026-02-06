@@ -62,6 +62,11 @@ export interface ITransaction extends Document {
     status: 'PENDING' | 'ALLOWED' | 'DENIED' | 'SIMULATING';
     severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
     paymentTxHash?: string;
+    // On-chain execution tracking
+    tx_hash?: string;
+    block_number?: number;
+    on_chain?: boolean;
+    executed_at?: string;
 }
 
 const TransactionSchema = new Schema({
@@ -74,7 +79,12 @@ const TransactionSchema = new Schema({
     intent: String,
     status: { type: String, enum: ['PENDING', 'ALLOWED', 'DENIED', 'SIMULATING'], default: 'PENDING' },
     severity: { type: String, enum: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'], default: 'LOW' },
-    paymentTxHash: String
+    paymentTxHash: String,
+    // On-chain execution tracking
+    tx_hash: String,
+    block_number: Number,
+    on_chain: { type: Boolean, default: false },
+    executed_at: String
 }, { timestamps: true });
 
 // Simulations

@@ -14,6 +14,7 @@ interface Web3ContextType {
     disconnectWallet: () => void;
     switchNetwork: (networkName: string) => Promise<void>;
     sendPayment: (to: string, amountWei: string) => Promise<string>;
+    executeTransaction: (txRequest: { to: string; data: string; value?: string }) => Promise<any>;
 }
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -25,24 +26,35 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
 
+
     const lastBalanceCheck = React.useRef<number>(0);
     const updateBalance = React.useCallback(async (address: string, p: ethers.BrowserProvider) => {
         if (!address) return;
 
-        // Throttle balance updates (max once per 5 seconds)
+        // Throttle balance updates (max once per 30 seconds to avoid RPC rate limits)
         const now = Date.now();
-        if (now - lastBalanceCheck.current < 5000) return;
+        if (now - lastBalanceCheck.current < 30000) return;
         lastBalanceCheck.current = now;
 
         try {
             const balance = await p.getBalance(address);
             setBalance(ethers.formatEther(balance));
         } catch (error: any) {
-            // Silently ignore rate limiting and noise errors
+            // Silently ignore rate limiting and RPC errors
             const msg = error.message?.toLowerCase() || '';
-            if (!msg.includes('coalesce') && !msg.includes('32002') && !msg.includes('too many errors')) {
+            const code = error.code;
+
+            // Don't log common RPC errors
+            if (!msg.includes('coalesce') &&
+                !msg.includes('32002') &&
+                !msg.includes('too many errors') &&
+                !msg.includes('rate limit') &&
+                code !== -32002 &&
+                code !== 'UNKNOWN_ERROR') {
                 console.error('Error fetching balance:', error);
             }
+            // Set a default balance on error to prevent UI issues
+            setBalance('0');
         }
     }, []);
 
@@ -264,14 +276,25 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             const address = await signer.getAddress();
             console.log('👤 Signer address:', address);
 
-            // Fetch balance to pre-verify
-            const balance = await p.getBalance(address);
-            const required = BigInt(amountWei) + ethers.parseEther('0.002'); // amount + gas buffer
+            // Try to fetch balance to pre-verify, but don't fail if RPC is having issues
+            try {
+                const balance = await p.getBalance(address);
+                const required = BigInt(amountWei) + ethers.parseEther('0.002'); // amount + gas buffer
 
-            if (balance < required) {
-                const balanceEth = ethers.formatEther(balance);
-                const requiredEth = ethers.formatEther(required);
-                throw new Error(`Insufficient MON balance. You have ${balanceEth}, but ~${requiredEth} is needed for the fee + gas.`);
+                if (balance < required) {
+                    const balanceEth = ethers.formatEther(balance);
+                    const requiredEth = ethers.formatEther(required);
+                    throw new Error(`Insufficient MON balance. You have ${balanceEth}, but ~${requiredEth} is needed for the fee + gas.`);
+                }
+            } catch (balanceError: any) {
+                // If balance check fails due to RPC issues, just warn and continue
+                const msg = balanceError.message?.toLowerCase() || '';
+                if (msg.includes('coalesce') || msg.includes('32002') || msg.includes('too many errors')) {
+                    console.warn('⚠️ Could not verify balance (RPC issue), proceeding anyway...');
+                } else {
+                    // Re-throw if it's an actual insufficient balance error
+                    throw balanceError;
+                }
             }
 
             const tx = await signer.sendTransaction({
@@ -293,8 +316,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             const receipt = await tx.wait();
             console.log('✅ Transaction confirmed in block:', receipt?.blockNumber);
 
-            // Refresh balance after payment
-            setTimeout(() => updateBalance(account, p), 2000);
+            // Refresh balance after payment (with delay to avoid rate limit)
+            setTimeout(() => updateBalance(account, p), 5000);
 
             return tx.hash;
         } catch (error: any) {
@@ -303,6 +326,47 @@ export function Web3Provider({ children }: { children: ReactNode }) {
             if (error.message.includes('insufficient funds')) {
                 throw new Error('Insufficient MON balance for the security fee and gas.');
             }
+            throw error;
+        }
+    };
+
+    const executeTransaction = async (txRequest: { to: string; data: string; value?: string }) => {
+        if (!window.ethereum || !account) {
+            throw new Error('Wallet not connected');
+        }
+
+        const p = new ethers.BrowserProvider(window.ethereum);
+        try {
+            console.log('🚀 Executing transaction on Monad:', txRequest);
+            const signer = await p.getSigner();
+
+            const tx = await signer.sendTransaction({
+                to: txRequest.to,
+                data: txRequest.data,
+                value: txRequest.value || '0',
+            });
+
+            console.log('⏳ Transaction submitted:', tx.hash);
+
+            toast.promise(tx.wait(), {
+                loading: 'Executing transaction on Monad...',
+                success: (receipt) => `Transaction confirmed! Block: ${receipt?.blockNumber}`,
+                error: (err: any) => `Execution failed: ${err.message || 'Unknown error'}`
+            });
+
+            const receipt = await tx.wait();
+            console.log('✅ Transaction confirmed:', receipt);
+
+            // Refresh balance after execution
+            setTimeout(() => updateBalance(account, p), 2000);
+
+            return {
+                hash: tx.hash,
+                blockNumber: receipt?.blockNumber,
+                status: receipt?.status
+            };
+        } catch (error: any) {
+            console.error('❌ executeTransaction failed:', error);
             throw error;
         }
     };
@@ -318,7 +382,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
                 connectWallet,
                 disconnectWallet,
                 switchNetwork,
-                sendPayment
+                sendPayment,
+                executeTransaction
             }}
         >
             {children}

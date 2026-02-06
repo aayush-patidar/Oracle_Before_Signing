@@ -273,6 +273,37 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.post<{ Body: { intent_id: string; tx_hash: string; block_number?: number } }>('/api/transactions/update-hash', async (request, reply) => {
+    try {
+      const { intent_id, tx_hash, block_number } = request.body;
+
+      if (!intent_id || !tx_hash) {
+        return reply.status(400).send({ error: 'Missing required fields: intent_id and tx_hash' });
+      }
+
+      const updated = await Queries.updateTransaction(intent_id, {
+        tx_hash,
+        block_number,
+        on_chain: true,
+        executed_at: new Date().toISOString()
+      });
+
+      if (updated) {
+        await Queries.addAuditLog({
+          actor: 'user',
+          action: 'TRANSACTION_EXECUTED_ON_CHAIN',
+          tx_hash,
+          decision: 'EXECUTED'
+        });
+      }
+
+      return reply.send({ success: true, tx_hash });
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Failed to update transaction hash' });
+    }
+  });
+
   /**
    * SIMULATION ENDPOINTS
    */

@@ -21,8 +21,9 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { account, sendPayment } = useWeb3();
+  const { account, sendPayment, executeTransaction } = useWeb3();
   const { policyMode } = usePolicy();
   const isRunningRef = useRef(false);
 
@@ -154,6 +155,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
   const startPolling = (currentRunId: string) => {
     if (isRunningRef.current) return;
     isRunningRef.current = true;
+    setCurrentRunId(currentRunId);
     pollResult(currentRunId, 0);
   };
 
@@ -227,6 +229,44 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           : `✅ TRANSACTION CLEARED: Approval of ${approvalAmount} to ${shortSpender} authorized. Balance impact: -${balanceImpact} USDT (${balanceAfter} USDT remaining). ${hasRisks ? 'Monitored with caution.' : 'No critical risks detected.'}`;
 
         addMessage('system', outcomeMsg, 'success');
+
+        // AUTO-EXECUTE: If transaction is ALLOWED, execute it on Monad automatically
+        if (judgment === 'ALLOW' && finalData.tx_request && account) {
+          addMessage('system', '🚀 Executing transaction on Monad blockchain...', 'status');
+
+          try {
+            const result = await executeTransaction(finalData.tx_request);
+
+            addMessage('system',
+              `🎉 Transaction executed on Monad!\nHash: ${result.hash}\nBlock: ${result.blockNumber}\nView: http://testnet.monadexplorer.com/tx/${result.hash}`,
+              'success'
+            );
+
+            // Update database with on-chain hash
+            if (currentRunId) {
+              try {
+                await fetch('/api/transactions/update-hash', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    intent_id: currentRunId,
+                    tx_hash: result.hash,
+                    block_number: result.blockNumber
+                  })
+                });
+              } catch (dbError) {
+                console.error('Failed to update transaction hash in DB:', dbError);
+              }
+            }
+          } catch (execError: any) {
+            addMessage('system',
+              `❌ On-chain execution failed: ${execError.message}\nTransaction was approved but not executed on blockchain.`,
+              'error'
+            );
+          }
+        } else if (judgment === 'ALLOW' && !account) {
+          addMessage('system', '⚠️ Wallet not connected. Transaction approved but not executed on-chain.', 'error');
+        }
       } else {
         await fetch('/api/alerts', {
           method: 'POST',
@@ -244,6 +284,42 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           : `📊 MONITOR LOG: Approval of ${approvalAmount} to ${shortSpender} analyzed. Balance impact: -${balanceImpact} USDT. ${hasRisks ? 'Minor risks noted.' : 'Transaction appears safe.'}`;
 
         addMessage('system', monitorMsg, 'status');
+
+        // AUTO-EXECUTE in Monitor Mode too if ALLOW
+        if (judgment === 'ALLOW' && finalData.tx_request && account) {
+          addMessage('system', '🚀 Executing transaction on Monad blockchain...', 'status');
+
+          try {
+            const result = await executeTransaction(finalData.tx_request);
+
+            addMessage('system',
+              `🎉 Transaction executed on Monad!\nHash: ${result.hash}\nBlock: ${result.blockNumber}\nView: http://testnet.monadexplorer.com/tx/${result.hash}`,
+              'success'
+            );
+
+            // Update database
+            if (currentRunId) {
+              try {
+                await fetch('/api/transactions/update-hash', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    intent_id: currentRunId,
+                    tx_hash: result.hash,
+                    block_number: result.blockNumber
+                  })
+                });
+              } catch (dbError) {
+                console.error('Failed to update transaction hash in DB:', dbError);
+              }
+            }
+          } catch (execError: any) {
+            addMessage('system',
+              `❌ On-chain execution failed: ${execError.message}`,
+              'error'
+            );
+          }
+        }
       }
 
       onStreamUpdate(finalData);

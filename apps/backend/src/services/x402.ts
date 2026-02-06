@@ -28,34 +28,81 @@ export const getX402Config = (): X402Config => {
 export async function verifyPaymentTx(txHash: string): Promise<{ ok: boolean; payer?: string; amountWei?: string; reason?: string }> {
     try {
         const config = getX402Config();
-        const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
-        // Retry fetching TX to handle RPC indexing delays (15s timeout)
+        // Create provider with longer timeout for Monad
+        const provider = new ethers.JsonRpcProvider(config.rpcUrl, undefined, {
+            staticNetwork: ethers.Network.from(config.chainId),
+            batchMaxCount: 1
+        });
+
+        console.log(`🔍 Verifying payment TX: ${txHash} on ${config.rpcUrl}`);
+
+        // Retry fetching TX to handle RPC indexing delays (30s timeout for Monad)
         let tx = null;
-        for (let i = 0; i < 15; i++) {
-            tx = await provider.getTransaction(txHash);
-            if (tx) break;
-            await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+        let attempts = 0;
+        const maxAttempts = 30;
+
+        for (let i = 0; i < maxAttempts; i++) {
+            attempts++;
+            try {
+                console.log(`🔄 Attempt ${attempts}/${maxAttempts} to fetch transaction...`);
+                tx = await Promise.race([
+                    provider.getTransaction(txHash),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Single attempt timeout')), 3000)
+                    )
+                ]) as any;
+
+                if (tx) {
+                    console.log(`✅ Transaction found on attempt ${attempts}`);
+                    break;
+                }
+            } catch (attemptError: any) {
+                if (attemptError.message === 'Single attempt timeout') {
+                    console.log(`⏱️ Attempt ${attempts} timed out, retrying...`);
+                } else {
+                    console.warn(`⚠️ Attempt ${attempts} error:`, attemptError.message);
+                }
+            }
+
+            if (i < maxAttempts - 1) {
+                await new Promise(r => setTimeout(r, 1000)); // Wait 1s between attempts
+            }
         }
 
         if (!tx) {
-            console.warn(`⚠️ x402: TX not found after 15s. Hash: ${txHash} on RPC: ${config.rpcUrl}`);
+            console.warn(`⚠️ x402: TX not found after ${attempts} attempts. Hash: ${txHash} on RPC: ${config.rpcUrl}`);
             return { ok: false, reason: 'TRANSACTION_NOT_FOUND_ON_CHAIN' };
         }
 
+        console.log(`📝 Transaction details:`, {
+            from: tx.from,
+            to: tx.to,
+            value: tx.value.toString(),
+            hash: tx.hash
+        });
+
         // Check if transaction was reverted
         try {
-            const receipt = await provider.getTransactionReceipt(txHash);
+            const receipt = await Promise.race([
+                provider.getTransactionReceipt(txHash),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Receipt timeout')), 5000)
+                )
+            ]) as any;
+
             if (receipt && receipt.status === 0) {
                 console.warn(`⚠️ x402: TX reverted: ${txHash}`);
                 return { ok: false, reason: 'TX_EXECUTION_REVERTED' };
             }
-        } catch (e) {
-            console.warn(`⚠️ x402: Error fetching receipt: ${e}`);
+        } catch (e: any) {
+            console.warn(`⚠️ x402: Error fetching receipt (continuing anyway):`, e.message);
+            // Continue verification even if receipt fetch fails
         }
 
         // Validate Receiver
         if (tx.to?.toLowerCase() !== config.payTo.toLowerCase()) {
+            console.error(`❌ Invalid receiver. Expected: ${config.payTo}, Got: ${tx.to}`);
             return { ok: false, reason: 'INVALID_RECEIVER' };
         }
 
@@ -64,19 +111,18 @@ export async function verifyPaymentTx(txHash: string): Promise<{ ok: boolean; pa
         const requiredValue = BigInt(config.priceWei);
 
         if (txValue < requiredValue) {
+            console.error(`❌ Insufficient amount. Required: ${requiredValue}, Got: ${txValue}`);
             return { ok: false, reason: 'INSUFFICIENT_AMOUNT' };
         }
 
-        // Validate Chain (optional check since we connect to the RPC)
-        // tx.chainId is for EIP-155
-
+        console.log(`✅ Payment verified successfully!`);
         return {
             ok: true,
             payer: tx.from,
             amountWei: tx.value.toString()
         };
-    } catch (error) {
-        console.error('x402 verification error:', error);
+    } catch (error: any) {
+        console.error('❌ x402 verification error:', error.message || error);
         return { ok: false, reason: 'VERIFICATION_ERROR' };
     }
 }
