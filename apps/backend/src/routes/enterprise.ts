@@ -361,7 +361,12 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const limit = parseInt((request.query as any).limit) || 50;
       const simulations = await Queries.getSimulations(limit);
-      return reply.send(simulations);
+      // Map createdAt to created_at for frontend compatibility
+      const mappedSimulations = simulations.map((sim: any) => ({
+        ...sim.toObject?.() || sim,
+        created_at: sim.createdAt || sim.created_at || new Date().toISOString()
+      }));
+      return reply.send(mappedSimulations);
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Failed to fetch simulations' });
