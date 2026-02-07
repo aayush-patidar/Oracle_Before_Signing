@@ -215,6 +215,62 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * TRANSACTION QUEUE ENDPOINTS
    */
+  fastify.post<{ Body: any }>('/api/transactions', async (request, reply) => {
+    try {
+      const {
+        intent_id,
+        from_address,
+        to_address,
+        data,
+        value,
+        function_name,
+        status,
+        severity,
+        network
+      } = request.body;
+
+      // Validate required fields
+      if (!from_address || !to_address) {
+        return reply.status(400).send({ error: 'Missing required fields: from_address and to_address' });
+      }
+
+      // Generate intent_id if not provided
+      const txIntentId = intent_id || `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      await Queries.addTransaction({
+        intent_id: txIntentId,
+        from_address,
+        to_address,
+        data: data || '',
+        value: value || '0',
+        function_name: function_name || 'unknown',
+        status: status || 'PENDING',
+        severity: severity || 'MEDIUM',
+        network: network || 'unknown'
+      });
+
+      // Add audit log
+      await Queries.addAuditLog({
+        actor: from_address,
+        action: 'TRANSACTION_CREATED',
+        tx_hash: txIntentId,
+        decision: status || 'PENDING'
+      });
+
+      return reply.status(201).send({
+        intent_id: txIntentId,
+        status: status || 'PENDING',
+        message: 'Transaction added to queue'
+      });
+    } catch (error: any) {
+      fastify.log.error(error);
+      if (error.message && (error.message.includes('duplicate key') || error.code === 11000)) {
+        return reply.status(409).send({ error: 'Transaction already exists' });
+      }
+      return reply.status(500).send({ error: 'Failed to create transaction' });
+    }
+  });
+
   fastify.get('/api/transactions', async (request, reply) => {
     try {
       const limit = parseInt((request.query as any).limit) || 50;
