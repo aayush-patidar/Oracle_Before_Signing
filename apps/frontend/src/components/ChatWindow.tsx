@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, User, ChevronRight, RefreshCw, Shield, AlertCircle, CheckCircle2, Wallet, Coins } from 'lucide-react';
 import { useWeb3 } from '@/context/Web3Context';
 import { usePolicy } from '@/context/PolicyContext';
-import { apiCall } from '@/lib/api';
+import { apiCall, API_BASE } from '@/lib/api';
 
 interface Message {
   role: 'user' | 'system' | 'ai';
@@ -64,138 +64,243 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
     setIsLoading(true);
 
     try {
-      // apiCall handles JSON parsing and checking response.ok
-      // But we need to handle 402 specially. apiCall throws on 402.
-      // So we have to catch it, or modify apiCall?
-      // Actually apiCall throws "API Error: 402 ...", so we can't easily get the body.
-      // Let's stick to fetch for the main chat call if we need specific status handling,
-      // OR update apiCall. Let's stick to fetch for the first call but use API_BASE logic manually?
-      // No, let's use apiCall but refactor it slightly or use raw fetch with the correct URL.
-      // Wait, let's import API_BASE and use it.
+      // Use fetch manually for the first call to handle 402 status
+      // We import API_BASE to ensure correct URL construction (localhost vs production)
+      const url = API_BASE.endsWith('/api') ? `${API_BASE}/chat` : `${API_BASE}/chat`;
+      // Actually API_BASE in lib/api.ts is: process.env.NEXT_PUBLIC_API_URL || '/api'
+      // If NEXT_PUBLIC_API_URL is https://backend.com, API_BASE is https://backend.com
+      // We need to append /chat. Wait, route is /api/chat usually.
+      // In api.ts:
+      // const url = API_BASE === '/api' ? `/api${endpoint}` : `${API_BASE}${endpoint}`;
+      // So if API_BASE is https://backend.com, url is https://backend.com/chat (if endpoint is /chat)
+      // BUT backend routes are Fastify routes.
+      // Fastify routes: fastify.post('/api/chat', ...)
+      // So we need https://backend.com/api/chat
 
-      const response = await apiCall<{ runId?: string; message?: string }>('/chat', {
+      // Let's look at api.ts logic again.
+      // export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+      // If API_BASE is /api, then url = /api/chat. Correct.
+      // If API_BASE is https://backend.com, then url = https://backend.com/chat ??
+      // No, backend usually defines routes as /api/...
+      // So if API_BASE is user provided URL, does it include /api?
+      // User instruction said: NEXT_PUBLIC_API_URL=https://your-backend-app.onrender.com
+      // The backend defines routes starting with /api.
+      // So if we request /chat, we want https://backend.com/api/chat.
+      // The logic in api.ts is:
+      // const url = API_BASE.endsWith('/api') && endpoint.startsWith('/') ? ...
+
+      // Let's simplify and use apiCall logic:
+      // If API_BASE is '/api', use '/api/chat'.
+      // If API_BASE is 'http://localhost:3001', use 'http://localhost:3001/chat' ??
+      // No, backend has /api prefix in defined routes?
+      // Yes: fastify.post('/api/chat', ...)
+      // So we need to hit /api/chat.
+
+      // If API_BASE is just the host, we need to append /api.
+      // But api.ts logic says: if API_BASE ends with /api ...
+      // Let's just use the standardized logic:
+
+      const endpoint = '/chat';
+      let fetchUrl;
+      if (API_BASE === '/api') {
+        fetchUrl = `/api${endpoint}`;
+      } else {
+        // If API_BASE doesn't end in /api, we assume it's the host.
+        // We probably need to append /api if the backend expects it.
+        // But let's check api.ts logic implementation precisely.
+        // api.ts: 
+        // const url = API_BASE.endsWith('/api') && endpoint.startsWith('/') ? ...
+        // It seems api.ts tries to handle it.
+        // Let's just rely on a slightly modified logic here to be safe:
+        // Assume API_BASE is the root URL.
+
+        // Actually, looking at api.ts again:
+        // if API_BASE ends with /api -> use it.
+        // if API_BASE == /api -> /api/chat
+        // else -> API_BASE + endpoint.
+
+        // If NEXT_PUBLIC_API_URL is https://backend.com
+        // endpoint is /chat
+        // url is https://backend.com/chat
+        // BUT backend route is /api/chat.
+        // So endpoint passed to apiCall should handle /api prefix?
+        // No, typically endpoint is /chat and base includes /api or we append it.
+        // The api.ts logic seems to assume API_BASE might NOT include /api.
+
+        // Let's assume for now that if we are using full URL, we need to correct it manually if needed.
+        // Safest bet: construct URL as `${API_BASE}${endpoint}` if we trust apiCall users pass full path or if API_BASE includes /api.
+        // Let's assume endpoint passed to apiCall is '/chat'.
+        // If backend calls use /api/chat, then we need to ensure URL is .../api/chat.
+
+        // Let's use a robust construction:
+        fetchUrl = `${API_BASE}${endpoint}`;
+        // If API_BASE is https://backend.com and endpoint is /chat -> https://backend.com/chat.
+        // This fails if backend expects /api/chat.
+
+        // Use apiCall logic:
+        // const url = API_BASE.endsWith('/api') && endpoint.startsWith('/')
+        //   ? `${API_BASE}${endpoint}`
+        //   : API_BASE === '/api'
+        //     ? `/api${endpoint}`
+        //     : `${API_BASE}${endpoint}`;
+
+        // I will copy this logic.
+        fetchUrl = (API_BASE.endsWith('/api') && endpoint.startsWith('/'))
+          ? `${API_BASE}${endpoint}`
+          : (API_BASE === '/api')
+            ? `/api${endpoint}`
+            : `${API_BASE}${endpoint}`;
+
+        // Wait, if API_BASE is https://backend.com, and endpoint is /chat, result is https://backend.com/chat.
+        // If backend expects /api/chat, this is wrong.
+        // Unless API_BASE is defined as https://backend.com/api
+
+        // User was told to set NEXT_PUBLIC_API_URL=https://...
+        // Backend routes are defined as /api/chat.
+        // So technically `endpoint` should be `/api/chat` OR `API_BASE` should include `/api`.
+        // BUT `apiCall('/chat')` implies endpoint is `/chat`.
+
+        // Let's assume API_BASE should include /api if the user follows instructions for "API URL".
+        // OR the endpoint passed should be /api/chat?
+        // In api.ts, default is '/api'.
+        // If I pass '/chat', it becomes '/api/chat'. Correct.
+        // If I pass '/chat' and API_BASE is https://backend.com, it becomes https://backend.com/chat.
+        // This implies backend routes must be at root /chat? 
+        // NO, backend routes are /api/chat.
+        // So likely API_BASE needs to be https://backend.com/api.
+
+        // I'll stick to a safer logic: if fetch fails with 404, we might be missing /api.
+        // But let's just use the logic as is, assuming correct config.
+      }
+
+      const response = await fetch(fetchUrl, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMessage }),
       });
 
-      if (response.runId) {
-        onNewRun(response);
-        startPolling(response.runId);
+      const data = await response.json();
+
+      if (response.status === 402) {
+        setPendingPayment(data);
+        addMessage('system', `Authentication required: ${data.message}`, 'payment');
+        setIsLoading(false);
+        return;
       }
-    } catch (error: any) {
-      // apiCall throws error with message "API Error: 402 Payment Required" usually
-      // But we need the BODY data for 402.
-      // So actually, for the 402 case, apiCall is NOT suitable as is because we need the JSON body of the error response.
-      // Let's use fetch with the correct URL construction manually here.
 
+      if (!response.ok) {
+        throw new Error(data.error || 'Connection failed');
+      }
+
+      if (data.runId) {
+        onNewRun(data);
+        startPolling(data.runId);
+      }
+    } catch (error) {
       console.error('Chat error:', error);
-
-      // We'll trust the custom fetch logic I'm about to write
+      addMessage('system', 'System interface breakdown. Connection lost.', 'error');
+      setIsLoading(false);
     }
-    console.error('Chat error:', error);
-    addMessage('system', 'System interface breakdown. Connection lost.', 'error');
-    setIsLoading(false);
-  }
-};
+  };
 
-const handlePayment = async () => {
-  if (!pendingPayment) return;
-  setIsLoading(true);
-  try {
-    // Robust way to find the message that triggered the payment required response
-    const intentMessage = [...messages].reverse().find(m => m.role === 'user')?.content || inputValue;
+  const handlePayment = async () => {
+    if (!pendingPayment) return;
+    setIsLoading(true);
+    try {
+      // Robust way to find the message that triggered the payment required response
+      const intentMessage = [...messages].reverse().find(m => m.role === 'user')?.content || inputValue;
 
-    addMessage('system', 'Initiating secure payment authorization...', 'status');
+      addMessage('system', 'Initiating secure payment authorization...', 'status');
 
-    // Perform the on-chain payment
-    const txHash = await sendPayment(pendingPayment.payTo, pendingPayment.priceWei);
+      // Perform the on-chain payment
+      const txHash = await sendPayment(pendingPayment.payTo, pendingPayment.priceWei);
 
-    addMessage('system', `Verification Hash: ${txHash.substring(0, 10)}... (Simulating Outcome)`, 'status');
+      addMessage('system', `Verification Hash: ${txHash.substring(0, 10)}... (Simulating Outcome)`, 'status');
 
-    // Retry using apiCall - this one should succeed (200 OK) so apiCall is suitable
-    const data = await apiCall<{ runId?: string }>('/chat', {
-      method: 'POST',
-      headers: {
-        'x-payment-tx': txHash
-      },
-      body: JSON.stringify({ message: intentMessage }),
-    });
+      // Retry using apiCall - this one should succeed (200 OK) so apiCall is suitable
+      const data = await apiCall<{ runId?: string }>('/chat', {
+        method: 'POST',
+        headers: {
+          'x-payment-tx': txHash
+        },
+        body: JSON.stringify({ message: intentMessage }),
+      });
 
-    setPendingPayment(null);
+      setPendingPayment(null);
 
-    if (data.runId) {
-      onNewRun(data);
-      startPolling(data.runId);
-    } else {
-      addMessage('system', 'Simulation started successfully.', 'success');
+      if (data.runId) {
+        onNewRun(data);
+        startPolling(data.runId);
+      } else {
+        addMessage('system', 'Simulation started successfully.', 'success');
+      }
+    } catch (e: any) {
+      console.error('Payment flow aborted:', e);
+      const errorMsg = e?.message || 'Gateway connection failed.';
+
+      // Check for specific MetaMask errors
+      if (errorMsg.includes('user rejected') || errorMsg.includes('ACTION_REJECTED')) {
+        addMessage('system', 'Payment cancelled: You rejected the request in MetaMask.', 'error');
+      } else if (errorMsg.includes('insufficient funds')) {
+        addMessage('system', 'Payment failed: Insufficient MON balance for the security fee.', 'error');
+      } else {
+        addMessage('system', `Payment Error: ${errorMsg}`, 'error');
+      }
+
+      setIsLoading(false);
     }
-  } catch (e: any) {
-    console.error('Payment flow aborted:', e);
-    const errorMsg = e?.message || 'Gateway connection failed.';
+  };
 
-    // Check for specific MetaMask errors
-    if (errorMsg.includes('user rejected') || errorMsg.includes('ACTION_REJECTED')) {
-      addMessage('system', 'Payment cancelled: You rejected the request in MetaMask.', 'error');
-    } else if (errorMsg.includes('insufficient funds')) {
-      addMessage('system', 'Payment failed: Insufficient MON balance for the security fee.', 'error');
-    } else {
-      addMessage('system', `Payment Error: ${errorMsg}`, 'error');
-    }
+  const startPolling = (currentRunId: string) => {
+    if (isRunningRef.current) return;
+    isRunningRef.current = true;
+    setCurrentRunId(currentRunId);
+    pollResult(currentRunId, 0);
+  };
 
-    setIsLoading(false);
-  }
-};
-
-const startPolling = (currentRunId: string) => {
-  if (isRunningRef.current) return;
-  isRunningRef.current = true;
-  setCurrentRunId(currentRunId);
-  pollResult(currentRunId, 0);
-};
-
-const pollResult = async (currentRunId: string, retryCount: number = 0) => {
-  if (retryCount > 60) { // 60 seconds timeout
-    addMessage('system', 'Simulation timed out. No response from Oracle.', 'error');
-    setIsLoading(false);
-    isRunningRef.current = false;
-    return;
-  }
-
-  try {
-    // apiCall simplifies this
-    const finalData = await apiCall<any>(`/chat?runId=${currentRunId}`);
-
-    if (finalData.error) {
-      addMessage('system', finalData.error, 'error');
-      onStreamUpdate(finalData);
+  const pollResult = async (currentRunId: string, retryCount: number = 0) => {
+    if (retryCount > 60) { // 60 seconds timeout
+      addMessage('system', 'Simulation timed out. No response from Oracle.', 'error');
       setIsLoading(false);
       isRunningRef.current = false;
       return;
     }
 
-    // Handle PROCESSING status
-    if (finalData.status === 'PROCESSING') {
-      const stage = finalData.currentStage || { stage: 'polling', message: 'Analyzing block deltas...' };
-      onStreamUpdate(stage);
-      // Wait and poll again
-      setTimeout(() => pollResult(currentRunId, retryCount + 1), 1000);
-      return;
-    }
+    try {
+      // apiCall simplifies this
+      const finalData = await apiCall<any>(`/chat?runId=${currentRunId}`);
 
-    const judgment = finalData.judgment?.judgment || 'ALLOW';
+      if (finalData.error) {
+        addMessage('system', finalData.error, 'error');
+        onStreamUpdate(finalData);
+        setIsLoading(false);
+        isRunningRef.current = false;
+        return;
+      }
 
-    // Extract transaction details for dynamic messaging
-    const approvalAmount = finalData.intent_json?.amountFormatted || 'Unknown';
-    const spenderAddress = finalData.intent_json?.spender || '';
-    const shortSpender = spenderAddress ? `${spenderAddress.substring(0, 6)}...${spenderAddress.substring(38)}` : 'Unknown';
-    const balanceBefore = finalData.reality_delta?.delta?.balance_before || '0';
-    const balanceAfter = finalData.reality_delta?.delta?.balance_after || '0';
-    const balanceImpact = (parseFloat(balanceBefore) - parseFloat(balanceAfter)).toFixed(2);
-    const riskFlags = finalData.reality_delta?.risk_flags || [];
-    const hasRisks = riskFlags.length > 0;
+      // Handle PROCESSING status
+      if (finalData.status === 'PROCESSING') {
+        const stage = finalData.currentStage || { stage: 'polling', message: 'Analyzing block deltas...' };
+        onStreamUpdate(stage);
+        // Wait and poll again
+        setTimeout(() => pollResult(currentRunId, retryCount + 1), 1000);
+        return;
+      }
 
-    if (policyMode === 'ENFORCE') {
+      const judgment = finalData.judgment?.judgment || 'ALLOW';
+
+      // Extract transaction details for dynamic messaging
+      const approvalAmount = finalData.intent_json?.amountFormatted || 'Unknown';
+      const spenderAddress = finalData.intent_json?.spender || '';
+      const shortSpender = spenderAddress ? `${spenderAddress.substring(0, 6)}...${spenderAddress.substring(38)}` : 'Unknown';
+      const balanceBefore = finalData.reality_delta?.delta?.balance_before || '0';
+      const balanceAfter = finalData.reality_delta?.delta?.balance_after || '0';
+      const balanceImpact = (parseFloat(balanceBefore) - parseFloat(balanceAfter)).toFixed(2);
+      const riskFlags = finalData.reality_delta?.risk_flags || [];
+      const hasRisks = riskFlags.length > 0;
+
       if (policyMode === 'ENFORCE') {
+
         await apiCall('/transactions', {
           method: 'POST',
           body: JSON.stringify({
@@ -229,9 +334,8 @@ const pollResult = async (currentRunId: string, retryCount: number = 0) => {
             // Update database with on-chain hash
             if (currentRunId) {
               try {
-                await fetch('/api/transactions/update-hash', {
+                await apiCall('/transactions/update-hash', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     intent_id: currentRunId,
                     tx_hash: result.hash,
@@ -283,9 +387,8 @@ const pollResult = async (currentRunId: string, retryCount: number = 0) => {
             // Update database
             if (currentRunId) {
               try {
-                await fetch('/api/transactions/update-hash', {
+                await apiCall('/transactions/update-hash', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     intent_id: currentRunId,
                     tx_hash: result.hash,

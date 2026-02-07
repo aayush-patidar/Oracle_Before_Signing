@@ -215,7 +215,7 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * TRANSACTION QUEUE ENDPOINTS
    */
-  fastify.post<{ Body: any }>('/api/transactions', async (request, reply) => {
+  fastify.post<{ Body: EnterpriseTxBody }>('/api/transactions', async (request, reply) => {
     try {
       const {
         intent_id,
