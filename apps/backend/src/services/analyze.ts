@@ -94,12 +94,16 @@ export class AnalysisService {
       flags.push('MALICIOUS_SPENDER');
     }
 
-    // Check for large approval (> 50% of balance equivalent)
+    // Check amount-based tiers
     if (intent && !intent.isUnlimited) {
-      const approvalAmount = parseFloat(intent.amount);
-      const balanceEquivalent = parseFloat(beforeState.balance);
-      if (approvalAmount > balanceEquivalent * 0.5) {
-        flags.push('LARGE_APPROVAL');
+      const approvalAmount = parseFloat(intent.amount) / 10 ** 6; // Convert to USDT
+
+      if (approvalAmount >= 800) {
+        flags.push('BLOCKED_AMOUNT'); // >= 800 USDT: BLOCKED
+      } else if (approvalAmount >= 500 && approvalAmount < 800) {
+        flags.push('PENDING_AMOUNT'); // 500-800 USDT: PENDING
+      } else if (approvalAmount < 500) {
+        flags.push('AUTO_APPROVED'); // < 500 USDT: AUTO-APPROVED
       }
     }
 

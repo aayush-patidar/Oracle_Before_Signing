@@ -18,14 +18,19 @@ export class JudgmentService {
     realityDelta: RealityDelta,
     simulationResult: SimulationResult
   ): Promise<Judgment> {
-    // Hard DENY rules (no exceptions)
+    // Hard DENY rules (no exceptions) - BLOCKED
     if (this.shouldDeny(intent, realityDelta)) {
       return this.createDenyJudgment(intent, realityDelta);
     }
 
-    // ALLOW rules
+    // ALLOW rules - AUTO-APPROVED
     if (this.shouldAllow(intent, realityDelta)) {
       return this.createAllowJudgment(intent, realityDelta);
+    }
+
+    // PENDING status for medium amounts (500-800 USDT)
+    if (this.shouldPend(intent)) {
+      return this.createPendingJudgment(intent, realityDelta);
     }
 
     // Risky but not malicious - allow override
@@ -43,11 +48,10 @@ export class JudgmentService {
       return true;
     }
 
-    // DENY if approval > 50% of balance equivalent
+    // DENY if amount >= 800 USDT (BLOCKED)
     if (!intent.isUnlimited) {
       const approvalAmount = parseFloat(intent.amount) / 10 ** 6; // Convert to USDT
-      const balance = parseFloat(realityDelta.delta.balance_before);
-      if (approvalAmount > balance * 0.5) {
+      if (approvalAmount >= 800) {
         return true;
       }
     }
@@ -56,22 +60,23 @@ export class JudgmentService {
   }
 
   private shouldAllow(intent: Intent, realityDelta: RealityDelta): boolean {
-    // ALLOW if small amount (<= 10 USDT)
+    // AUTO-APPROVE if amount < 500 USDT
     if (!intent.isUnlimited) {
       const amount = parseFloat(intent.amount) / 10 ** 6; // Convert to USDT
-      if (amount <= 10) {
+      if (amount < 500) {
         return true;
       }
     }
 
-    // ALLOW if spender is not malicious and no critical risk flags
-    const hasCriticalRisks = realityDelta.risk_flags.includes('MALICIOUS_SPENDER') ||
-      realityDelta.risk_flags.includes('UNLIMITED_APPROVAL');
+    return false;
+  }
 
-    if (intent.spender.toLowerCase() !== MALICIOUS_SPENDER.toLowerCase() && !hasCriticalRisks) {
-      return true;
+  // Check if transaction should go to PENDING status (500 <= amount < 800)
+  private shouldPend(intent: Intent): boolean {
+    if (!intent.isUnlimited) {
+      const amount = parseFloat(intent.amount) / 10 ** 6; // Convert to USDT
+      return amount >= 500 && amount < 800;
     }
-
     return false;
   }
 
@@ -80,7 +85,16 @@ export class JudgmentService {
     let question = '';
     let overrideAllowed = false;
 
-    if (realityDelta.risk_flags.includes('MALICIOUS_SPENDER')) {
+    // Check if this is a high-amount block (>= 800 USDT)
+    const approvalAmount = !intent.isUnlimited ? parseFloat(intent.amount) / 10 ** 6 : 0;
+
+    if (approvalAmount >= 800) {
+      reasoning.push(`Transaction amount: ${approvalAmount.toFixed(2)} USDT exceeds maximum limit`);
+      reasoning.push('Amounts >= 800 USDT are automatically blocked for security');
+      reasoning.push('Balance protected: ${realityDelta.delta.balance_before} USDT');
+      question = 'This transaction exceeds the maximum allowed amount of 800 USDT. It has been blocked for your protection.';
+      overrideAllowed = false; // No override for amounts >= 800
+    } else if (realityDelta.risk_flags.includes('MALICIOUS_SPENDER')) {
       reasoning.push('Spender is in malicious list');
       reasoning.push('Simulation shows complete fund drain');
       question = 'This approval gives permanent spending power and simulation shows your funds reach 0. Why is this acceptable?';
@@ -111,15 +125,33 @@ export class JudgmentService {
   }
 
   private createAllowJudgment(intent: Intent, realityDelta: RealityDelta): Judgment {
+    const approvalAmount = !intent.isUnlimited ? parseFloat(intent.amount) / 10 ** 6 : 0;
+
     return {
       judgment: 'ALLOW',
       reasoning_bullets: [
-        'Small approval amount',
-        'Spender appears safe',
-        'No simulation risks detected'
+        `Transaction amount: ${approvalAmount.toFixed(2)} USDT is below 500 USDT threshold`,
+        'Auto-approved for amounts less than 500 USDT',
+        `Current balance: ${realityDelta.delta.balance_before} USDT`
       ],
-      adversarial_question: 'If this spender misbehaves, you can revoke later—do you still want to proceed?',
+      adversarial_question: 'This transaction has been automatically approved. Proceed with confidence.',
       override_allowed: true
+    };
+  }
+
+  private createPendingJudgment(intent: Intent, realityDelta: RealityDelta): Judgment {
+    const approvalAmount = !intent.isUnlimited ? parseFloat(intent.amount) / 10 ** 6 : 0;
+
+    return {
+      judgment: 'DENY',
+      reasoning_bullets: [
+        `Transaction amount: ${approvalAmount.toFixed(2)} USDT requires manual approval`,
+        'Amounts between 500-800 USDT need review',
+        `Current balance: ${realityDelta.delta.balance_before} USDT`,
+        'Please review and approve or deny this transaction'
+      ],
+      adversarial_question: 'This transaction is in the pending range (500-800 USDT). Do you want to approve this transaction?',
+      override_allowed: true // Allow manual approval
     };
   }
 
