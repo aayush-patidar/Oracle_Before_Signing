@@ -22,7 +22,8 @@
     "build": "npm run build --workspace=apps/frontend && npm run build --workspace=apps/backend",
     "start": "concurrently \"npm run start --workspace=apps/backend\" \"npm run start --workspace=apps/frontend\"",
     "kill:ports": "node scripts/kill-ports.js",
-    "health": "node scripts/health-check.js"
+    "health": "node scripts/health-check.js",
+    "diagnose": "node scripts/diagnose-deployment.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -14,11 +14,19 @@ export async function apiCall<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = API_BASE.endsWith('/api') && endpoint.startsWith('/')
-    ? `${API_BASE}${endpoint}`
-    : API_BASE === '/api'
-      ? `/api${endpoint}`
-      : `${API_BASE}${endpoint}`;
+  // Construct URL properly:
+  // - If API_BASE is '/api' (local), use '/api' + endpoint
+  // - If API_BASE is external URL (e.g., https://backend.onrender.com), use API_BASE + '/api' + endpoint
+  let url: string;
+
+  if (API_BASE === '/api') {
+    // Local development: use Next.js rewrites
+    url = `/api${endpoint}`;
+  } else {
+    // Production: external backend URL
+    // Ensure we add /api prefix since backend routes are defined with /api
+    url = `${API_BASE}/api${endpoint}`;
+  }
 
   const response = await fetch(url, {
     ...options,
@@ -39,8 +47,13 @@ export async function apiCall<T>(
  * Fetch from backend with streaming
  */
 export function apiStream(endpoint: string): EventSource {
-  const url = API_BASE === '/api'
-    ? `/api${endpoint}`
-    : `${API_BASE}${endpoint}`;
+  let url: string;
+
+  if (API_BASE === '/api') {
+    url = `/api${endpoint}`;
+  } else {
+    url = `${API_BASE}/api${endpoint}`;
+  }
+
   return new EventSource(url);
 }

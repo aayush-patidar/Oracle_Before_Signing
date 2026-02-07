@@ -65,115 +65,12 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
 
     try {
       // Use fetch manually for the first call to handle 402 status
-      // We import API_BASE to ensure correct URL construction (localhost vs production)
-      const url = API_BASE.endsWith('/api') ? `${API_BASE}/chat` : `${API_BASE}/chat`;
-      // Actually API_BASE in lib/api.ts is: process.env.NEXT_PUBLIC_API_URL || '/api'
-      // If NEXT_PUBLIC_API_URL is https://backend.com, API_BASE is https://backend.com
-      // We need to append /chat. Wait, route is /api/chat usually.
-      // In api.ts:
-      // const url = API_BASE === '/api' ? `/api${endpoint}` : `${API_BASE}${endpoint}`;
-      // So if API_BASE is https://backend.com, url is https://backend.com/chat (if endpoint is /chat)
-      // BUT backend routes are Fastify routes.
-      // Fastify routes: fastify.post('/api/chat', ...)
-      // So we need https://backend.com/api/chat
-
-      // Let's look at api.ts logic again.
-      // export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
-      // If API_BASE is /api, then url = /api/chat. Correct.
-      // If API_BASE is https://backend.com, then url = https://backend.com/chat ??
-      // No, backend usually defines routes as /api/...
-      // So if API_BASE is user provided URL, does it include /api?
-      // User instruction said: NEXT_PUBLIC_API_URL=https://your-backend-app.onrender.com
-      // The backend defines routes starting with /api.
-      // So if we request /chat, we want https://backend.com/api/chat.
-      // The logic in api.ts is:
-      // const url = API_BASE.endsWith('/api') && endpoint.startsWith('/') ? ...
-
-      // Let's simplify and use apiCall logic:
-      // If API_BASE is '/api', use '/api/chat'.
-      // If API_BASE is 'http://localhost:3001', use 'http://localhost:3001/chat' ??
-      // No, backend has /api prefix in defined routes?
-      // Yes: fastify.post('/api/chat', ...)
-      // So we need to hit /api/chat.
-
-      // If API_BASE is just the host, we need to append /api.
-      // But api.ts logic says: if API_BASE ends with /api ...
-      // Let's just use the standardized logic:
-
       const endpoint = '/chat';
-      let fetchUrl;
-      if (API_BASE === '/api') {
-        fetchUrl = `/api${endpoint}`;
-      } else {
-        // If API_BASE doesn't end in /api, we assume it's the host.
-        // We probably need to append /api if the backend expects it.
-        // But let's check api.ts logic implementation precisely.
-        // api.ts: 
-        // const url = API_BASE.endsWith('/api') && endpoint.startsWith('/') ? ...
-        // It seems api.ts tries to handle it.
-        // Let's just rely on a slightly modified logic here to be safe:
-        // Assume API_BASE is the root URL.
+      const url = API_BASE === '/api'
+        ? `/api${endpoint}`
+        : `${API_BASE}/api${endpoint}`;
 
-        // Actually, looking at api.ts again:
-        // if API_BASE ends with /api -> use it.
-        // if API_BASE == /api -> /api/chat
-        // else -> API_BASE + endpoint.
-
-        // If NEXT_PUBLIC_API_URL is https://backend.com
-        // endpoint is /chat
-        // url is https://backend.com/chat
-        // BUT backend route is /api/chat.
-        // So endpoint passed to apiCall should handle /api prefix?
-        // No, typically endpoint is /chat and base includes /api or we append it.
-        // The api.ts logic seems to assume API_BASE might NOT include /api.
-
-        // Let's assume for now that if we are using full URL, we need to correct it manually if needed.
-        // Safest bet: construct URL as `${API_BASE}${endpoint}` if we trust apiCall users pass full path or if API_BASE includes /api.
-        // Let's assume endpoint passed to apiCall is '/chat'.
-        // If backend calls use /api/chat, then we need to ensure URL is .../api/chat.
-
-        // Let's use a robust construction:
-        fetchUrl = `${API_BASE}${endpoint}`;
-        // If API_BASE is https://backend.com and endpoint is /chat -> https://backend.com/chat.
-        // This fails if backend expects /api/chat.
-
-        // Use apiCall logic:
-        // const url = API_BASE.endsWith('/api') && endpoint.startsWith('/')
-        //   ? `${API_BASE}${endpoint}`
-        //   : API_BASE === '/api'
-        //     ? `/api${endpoint}`
-        //     : `${API_BASE}${endpoint}`;
-
-        // I will copy this logic.
-        fetchUrl = (API_BASE.endsWith('/api') && endpoint.startsWith('/'))
-          ? `${API_BASE}${endpoint}`
-          : (API_BASE === '/api')
-            ? `/api${endpoint}`
-            : `${API_BASE}${endpoint}`;
-
-        // Wait, if API_BASE is https://backend.com, and endpoint is /chat, result is https://backend.com/chat.
-        // If backend expects /api/chat, this is wrong.
-        // Unless API_BASE is defined as https://backend.com/api
-
-        // User was told to set NEXT_PUBLIC_API_URL=https://...
-        // Backend routes are defined as /api/chat.
-        // So technically `endpoint` should be `/api/chat` OR `API_BASE` should include `/api`.
-        // BUT `apiCall('/chat')` implies endpoint is `/chat`.
-
-        // Let's assume API_BASE should include /api if the user follows instructions for "API URL".
-        // OR the endpoint passed should be /api/chat?
-        // In api.ts, default is '/api'.
-        // If I pass '/chat', it becomes '/api/chat'. Correct.
-        // If I pass '/chat' and API_BASE is https://backend.com, it becomes https://backend.com/chat.
-        // This implies backend routes must be at root /chat? 
-        // NO, backend routes are /api/chat.
-        // So likely API_BASE needs to be https://backend.com/api.
-
-        // I'll stick to a safer logic: if fetch fails with 404, we might be missing /api.
-        // But let's just use the logic as is, assuming correct config.
-      }
-
-      const response = await fetch(fetchUrl, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMessage }),
