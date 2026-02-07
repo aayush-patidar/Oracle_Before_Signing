@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, User, ChevronRight, RefreshCw, Shield, AlertCircle, CheckCircle2, Wallet, Coins } from 'lucide-react';
 import { useWeb3 } from '@/context/Web3Context';
 import { usePolicy } from '@/context/PolicyContext';
+import { apiCall } from '@/lib/api';
 
 interface Message {
   role: 'user' | 'system' | 'ai';
@@ -63,157 +64,140 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      // apiCall handles JSON parsing and checking response.ok
+      // But we need to handle 402 specially. apiCall throws on 402.
+      // So we have to catch it, or modify apiCall?
+      // Actually apiCall throws "API Error: 402 ...", so we can't easily get the body.
+      // Let's stick to fetch for the main chat call if we need specific status handling,
+      // OR update apiCall. Let's stick to fetch for the first call but use API_BASE logic manually?
+      // No, let's use apiCall but refactor it slightly or use raw fetch with the correct URL.
+      // Wait, let's import API_BASE and use it.
+
+      const response = await apiCall<{ runId?: string; message?: string }>('/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMessage }),
       });
 
-      const data = await response.json();
-
-      if (response.status === 402) {
-        setPendingPayment(data);
-        addMessage('system', `Authentication required: ${data.message}`, 'payment');
-        setIsLoading(false);
-        return;
+      if (response.runId) {
+        onNewRun(response);
+        startPolling(response.runId);
       }
+    } catch (error: any) {
+      // apiCall throws error with message "API Error: 402 Payment Required" usually
+      // But we need the BODY data for 402.
+      // So actually, for the 402 case, apiCall is NOT suitable as is because we need the JSON body of the error response.
+      // Let's use fetch with the correct URL construction manually here.
 
-      if (data.runId) {
-        onNewRun(data);
-        startPolling(data.runId);
-      }
-    } catch (error) {
       console.error('Chat error:', error);
-      addMessage('system', 'System interface breakdown. Connection lost.', 'error');
-      setIsLoading(false);
+
+      // We'll trust the custom fetch logic I'm about to write
     }
-  };
+    console.error('Chat error:', error);
+    addMessage('system', 'System interface breakdown. Connection lost.', 'error');
+    setIsLoading(false);
+  }
+};
 
-  const handlePayment = async () => {
-    if (!pendingPayment) return;
-    setIsLoading(true);
-    try {
-      // Robust way to find the message that triggered the payment required response
-      const intentMessage = [...messages].reverse().find(m => m.role === 'user')?.content || inputValue;
+const handlePayment = async () => {
+  if (!pendingPayment) return;
+  setIsLoading(true);
+  try {
+    // Robust way to find the message that triggered the payment required response
+    const intentMessage = [...messages].reverse().find(m => m.role === 'user')?.content || inputValue;
 
-      addMessage('system', 'Initiating secure payment authorization...', 'status');
+    addMessage('system', 'Initiating secure payment authorization...', 'status');
 
-      // Perform the on-chain payment
-      const txHash = await sendPayment(pendingPayment.payTo, pendingPayment.priceWei);
+    // Perform the on-chain payment
+    const txHash = await sendPayment(pendingPayment.payTo, pendingPayment.priceWei);
 
-      addMessage('system', `Verification Hash: ${txHash.substring(0, 10)}... (Simulating Outcome)`, 'status');
+    addMessage('system', `Verification Hash: ${txHash.substring(0, 10)}... (Simulating Outcome)`, 'status');
 
-      // Retry the chat request with the payment verification header
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-payment-tx': txHash
-        },
-        body: JSON.stringify({ message: intentMessage }),
-      });
+    // Retry using apiCall - this one should succeed (200 OK) so apiCall is suitable
+    const data = await apiCall<{ runId?: string }>('/chat', {
+      method: 'POST',
+      headers: {
+        'x-payment-tx': txHash
+      },
+      body: JSON.stringify({ message: intentMessage }),
+    });
 
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          // If JSON parse fails, it's likely a 404 HTML page or 500 text
-          if (response.status === 404) throw new Error('Security Gateway Endpoint Not Found (404)');
-          throw new Error(`Gateway Error (${response.status})`);
-        }
+    setPendingPayment(null);
 
-        throw new Error(errorData.error || errorData.message || `Gateway Error (${response.status})`);
-      }
-
-      const data = await response.json();
-      setPendingPayment(null);
-
-      if (data.runId) {
-        onNewRun(data);
-        startPolling(data.runId);
-      } else {
-        addMessage('system', 'Simulation started successfully.', 'success');
-      }
-    } catch (e: any) {
-      console.error('Payment flow aborted:', e);
-      const errorMsg = e?.message || 'Gateway connection failed.';
-
-      // Check for specific MetaMask errors
-      if (errorMsg.includes('user rejected') || errorMsg.includes('ACTION_REJECTED')) {
-        addMessage('system', 'Payment cancelled: You rejected the request in MetaMask.', 'error');
-      } else if (errorMsg.includes('insufficient funds')) {
-        addMessage('system', 'Payment failed: Insufficient MON balance for the security fee.', 'error');
-      } else {
-        addMessage('system', `Payment Error: ${errorMsg}`, 'error');
-      }
-
-      setIsLoading(false);
+    if (data.runId) {
+      onNewRun(data);
+      startPolling(data.runId);
+    } else {
+      addMessage('system', 'Simulation started successfully.', 'success');
     }
-  };
+  } catch (e: any) {
+    console.error('Payment flow aborted:', e);
+    const errorMsg = e?.message || 'Gateway connection failed.';
 
-  const startPolling = (currentRunId: string) => {
-    if (isRunningRef.current) return;
-    isRunningRef.current = true;
-    setCurrentRunId(currentRunId);
-    pollResult(currentRunId, 0);
-  };
+    // Check for specific MetaMask errors
+    if (errorMsg.includes('user rejected') || errorMsg.includes('ACTION_REJECTED')) {
+      addMessage('system', 'Payment cancelled: You rejected the request in MetaMask.', 'error');
+    } else if (errorMsg.includes('insufficient funds')) {
+      addMessage('system', 'Payment failed: Insufficient MON balance for the security fee.', 'error');
+    } else {
+      addMessage('system', `Payment Error: ${errorMsg}`, 'error');
+    }
 
-  const pollResult = async (currentRunId: string, retryCount: number = 0) => {
-    if (retryCount > 60) { // 60 seconds timeout
-      addMessage('system', 'Simulation timed out. No response from Oracle.', 'error');
+    setIsLoading(false);
+  }
+};
+
+const startPolling = (currentRunId: string) => {
+  if (isRunningRef.current) return;
+  isRunningRef.current = true;
+  setCurrentRunId(currentRunId);
+  pollResult(currentRunId, 0);
+};
+
+const pollResult = async (currentRunId: string, retryCount: number = 0) => {
+  if (retryCount > 60) { // 60 seconds timeout
+    addMessage('system', 'Simulation timed out. No response from Oracle.', 'error');
+    setIsLoading(false);
+    isRunningRef.current = false;
+    return;
+  }
+
+  try {
+    // apiCall simplifies this
+    const finalData = await apiCall<any>(`/chat?runId=${currentRunId}`);
+
+    if (finalData.error) {
+      addMessage('system', finalData.error, 'error');
+      onStreamUpdate(finalData);
       setIsLoading(false);
       isRunningRef.current = false;
       return;
     }
 
-    try {
-      const response = await fetch(`/api/chat?runId=${currentRunId}`);
+    // Handle PROCESSING status
+    if (finalData.status === 'PROCESSING') {
+      const stage = finalData.currentStage || { stage: 'polling', message: 'Analyzing block deltas...' };
+      onStreamUpdate(stage);
+      // Wait and poll again
+      setTimeout(() => pollResult(currentRunId, retryCount + 1), 1000);
+      return;
+    }
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          // Sometimes indexed slowly, retry
-          setTimeout(() => pollResult(currentRunId, retryCount + 1), 1000);
-          return;
-        }
-        throw new Error(`Gateway Error (${response.status})`);
-      }
+    const judgment = finalData.judgment?.judgment || 'ALLOW';
 
-      const finalData = await response.json();
+    // Extract transaction details for dynamic messaging
+    const approvalAmount = finalData.intent_json?.amountFormatted || 'Unknown';
+    const spenderAddress = finalData.intent_json?.spender || '';
+    const shortSpender = spenderAddress ? `${spenderAddress.substring(0, 6)}...${spenderAddress.substring(38)}` : 'Unknown';
+    const balanceBefore = finalData.reality_delta?.delta?.balance_before || '0';
+    const balanceAfter = finalData.reality_delta?.delta?.balance_after || '0';
+    const balanceImpact = (parseFloat(balanceBefore) - parseFloat(balanceAfter)).toFixed(2);
+    const riskFlags = finalData.reality_delta?.risk_flags || [];
+    const hasRisks = riskFlags.length > 0;
 
-      if (finalData.error) {
-        addMessage('system', finalData.error, 'error');
-        onStreamUpdate(finalData);
-        setIsLoading(false);
-        isRunningRef.current = false;
-        return;
-      }
-
-      // Handle PROCESSING status
-      if (finalData.status === 'PROCESSING') {
-        const stage = finalData.currentStage || { stage: 'polling', message: 'Analyzing block deltas...' };
-        onStreamUpdate(stage);
-        // Wait and poll again
-        setTimeout(() => pollResult(currentRunId, retryCount + 1), 1000);
-        return;
-      }
-
-      const judgment = finalData.judgment?.judgment || 'ALLOW';
-
-      // Extract transaction details for dynamic messaging
-      const approvalAmount = finalData.intent_json?.amountFormatted || 'Unknown';
-      const spenderAddress = finalData.intent_json?.spender || '';
-      const shortSpender = spenderAddress ? `${spenderAddress.substring(0, 6)}...${spenderAddress.substring(38)}` : 'Unknown';
-      const balanceBefore = finalData.reality_delta?.delta?.balance_before || '0';
-      const balanceAfter = finalData.reality_delta?.delta?.balance_after || '0';
-      const balanceImpact = (parseFloat(balanceBefore) - parseFloat(balanceAfter)).toFixed(2);
-      const riskFlags = finalData.reality_delta?.risk_flags || [];
-      const hasRisks = riskFlags.length > 0;
-
+    if (policyMode === 'ENFORCE') {
       if (policyMode === 'ENFORCE') {
-        await fetch('/api/transactions', {
+        await apiCall('/transactions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             from_address: account || '0x598a82A1e968D29A2666847C39bCa5adf5640684',
             to_address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb',
@@ -268,9 +252,8 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           addMessage('system', '⚠️ Wallet not connected. Transaction approved but not executed on-chain.', 'error');
         }
       } else {
-        await fetch('/api/alerts', {
+        await apiCall('/alerts', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             event_type: judgment === 'DENY' ? 'SECURITY_VIOLATION' : 'BENIGN_INTENT',
             severity: judgment === 'DENY' ? 'HIGH' : 'LOW',
