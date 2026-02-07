@@ -167,7 +167,10 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
       // apiCall simplifies this
       const finalData = await apiCall<any>(`/chat?runId=${currentRunId}`);
 
+      console.log(`[pollResult] Retry ${retryCount}, Data:`, finalData);
+
       if (finalData.error) {
+        console.log('[pollResult] Error received:', finalData.error);
         addMessage('system', finalData.error, 'error');
         onStreamUpdate(finalData);
         setIsLoading(false);
@@ -177,12 +180,15 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
 
       // Handle PROCESSING status
       if (finalData.status === 'PROCESSING') {
+        console.log('[pollResult] Still processing, stage:', finalData.currentStage);
         const stage = finalData.currentStage || { stage: 'polling', message: 'Analyzing block deltas...' };
         onStreamUpdate(stage);
         // Wait and poll again
         setTimeout(() => pollResult(currentRunId, retryCount + 1), 1000);
         return;
       }
+
+      console.log('[pollResult] Final data received, judgment:', finalData.judgment?.judgment);
 
       const judgment = finalData.judgment?.judgment || 'ALLOW';
 
@@ -253,6 +259,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           addMessage('system', '⚠️ Wallet not connected. Transaction approved but not executed on-chain.', 'error');
         }
       } else {
+        console.log('[pollResult] Monitor Mode - Creating alert');
         await apiCall('/alerts', {
           method: 'POST',
           body: JSON.stringify({
@@ -267,10 +274,12 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           ? `⚠️ MONITOR ALERT: Approval of ${approvalAmount} to ${shortSpender} flagged as high-risk. ${hasRisks ? `Risks: ${riskFlags.join(', ')}` : 'Security concerns detected'}. Potential loss: ${balanceImpact} USDT. Transaction logged but not blocked (Monitor Mode).`
           : `📊 MONITOR LOG: Approval of ${approvalAmount} to ${shortSpender} analyzed. Balance impact: -${balanceImpact} USDT. ${hasRisks ? 'Minor risks noted.' : 'Transaction appears safe.'}`;
 
+        console.log('[pollResult] Monitor Mode - Adding message:', monitorMsg);
         addMessage('system', monitorMsg, 'status');
 
         // AUTO-EXECUTE in Monitor Mode too if ALLOW
         if (judgment === 'ALLOW' && finalData.tx_request && account) {
+          console.log('[pollResult] Monitor Mode - Auto-executing transaction');
           addMessage('system', '🚀 Executing transaction on Monad blockchain...', 'status');
 
           try {
@@ -305,9 +314,12 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
         }
       }
 
+      console.log('[pollResult] Calling onStreamUpdate with final data');
       onStreamUpdate(finalData);
+      console.log('[pollResult] Setting isLoading to false');
       setIsLoading(false);
       isRunningRef.current = false;
+      console.log('[pollResult] Polling complete');
     } catch (e) {
       console.error('Polling error:', e);
       setIsLoading(false);
