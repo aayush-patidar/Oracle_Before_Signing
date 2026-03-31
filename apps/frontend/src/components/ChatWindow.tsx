@@ -203,23 +203,9 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
       const hasRisks = riskFlags.length > 0;
 
       if (policyMode === 'ENFORCE') {
-<<<<<<< HEAD
-
-        await apiCall('/transactions', {
-          method: 'POST',
-          body: JSON.stringify({
-            from_address: account || '0x598a82A1e968D29A2666847C39bCa5adf5640684',
-            to_address: '0x1F95a95810FB99bb2781545b89E2791AD87DfAFb',
-            function_name: 'approve',
-            status: judgment === 'DENY' ? 'DENIED' : 'ALLOWED',
-            severity: judgment === 'DENY' ? 'CRITICAL' : 'LOW'
-          })
-        });
-=======
         // Dynamic message based on transaction details and status
         let outcomeMsg = '';
         let messageType: Message['type'] = 'success';
->>>>>>> 63118a6 (issue solve)
 
         if (judgment === 'DENY') {
           if (finalData.next_step === 'NEED_JUSTIFICATION') {
@@ -273,19 +259,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           addMessage('system', '⚠️ Wallet not connected. Transaction approved but not executed on-chain.', 'error');
         }
       } else {
-<<<<<<< HEAD
-        console.log('[pollResult] Monitor Mode - Creating alert');
-        await apiCall('/alerts', {
-          method: 'POST',
-          body: JSON.stringify({
-            event_type: judgment === 'DENY' ? 'SECURITY_VIOLATION' : 'BENIGN_INTENT',
-            severity: judgment === 'DENY' ? 'HIGH' : 'LOW',
-            message: `Oracle Simulation: ${finalData.judgment?.reasoning_summary || 'Analysis finished'}`
-          })
-        });
 
-=======
->>>>>>> 63118a6 (issue solve)
         // Dynamic monitor mode message
         const monitorMsg = judgment === 'DENY'
           ? `⚠️ MONITOR ALERT: Approval of ${approvalAmount} to ${shortSpender} flagged as high-risk. ${hasRisks ? `Risks: ${riskFlags.join(', ')}` : 'Security concerns detected'}. Potential loss: ${balanceImpact} USDT. Transaction logged but not blocked (Monitor Mode).`

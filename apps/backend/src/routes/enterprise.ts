@@ -271,7 +271,6 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-<<<<<<< HEAD
   fastify.get('/api/transactions', async (request, reply) => {
     try {
       const limit = parseInt((request.query as any).limit) || 50;
@@ -296,14 +295,9 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-
-
-  fastify.patch<{ Params: { id: string }; Body: { status: string } }>('/api/transactions/:id', async (request, reply) => {
-=======
   fastify.patch<{ Params: { id: string }; Body: any }>('/api/transactions/:id', async (request, reply) => {
->>>>>>> 63118a6 (issue solve)
     try {
-      const updates = request.body;
+      const updates = request.body as any;
       
       // Basic status validation if provided
       if (updates.status && !['ALLOWED', 'DENIED', 'PENDING', 'SIMULATING'].includes(updates.status)) {
