@@ -76,11 +76,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Settings</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Configure security console preferences and policies
         </p>
       </div>
@@ -150,7 +150,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Policy Settings */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
@@ -262,7 +262,7 @@ export default function SettingsPage() {
             System Information
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-x-12 gap-y-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
           <div className="flex justify-between border-b border-gray-700 pb-2">
             <span className="text-gray-400 text-sm flex items-center gap-2"><Server className="w-3.5 h-3.5" /> Version</span>
             <span className="text-white text-sm font-mono">1.0.0 (Enterprise)</span>

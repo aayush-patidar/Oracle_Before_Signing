@@ -203,6 +203,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
       const hasRisks = riskFlags.length > 0;
 
       if (policyMode === 'ENFORCE') {
+<<<<<<< HEAD
 
         await apiCall('/transactions', {
           method: 'POST',
@@ -214,13 +215,26 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
             severity: judgment === 'DENY' ? 'CRITICAL' : 'LOW'
           })
         });
+=======
+        // Dynamic message based on transaction details and status
+        let outcomeMsg = '';
+        let messageType: Message['type'] = 'success';
+>>>>>>> 63118a6 (issue solve)
 
-        // Dynamic message based on transaction details
-        const outcomeMsg = judgment === 'DENY'
-          ? `🚫 TRANSACTION BLOCKED: Approval of ${approvalAmount} to ${shortSpender} denied. ${hasRisks ? `Risks: ${riskFlags.join(', ')}` : 'High-risk detected'}. Balance protected: ${balanceBefore} USDT.`
-          : `✅ TRANSACTION CLEARED: Approval of ${approvalAmount} to ${shortSpender} authorized. Balance impact: -${balanceImpact} USDT (${balanceAfter} USDT remaining). ${hasRisks ? 'Monitored with caution.' : 'No critical risks detected.'}`;
+        if (judgment === 'DENY') {
+          if (finalData.next_step === 'NEED_JUSTIFICATION') {
+            outcomeMsg = `⏳ TRANSACTION PENDING: Approval of ${approvalAmount} to ${shortSpender} requires manual review. This exceeds 50% of your current balance. Please approve from the Transaction Queue dashboard.`;
+            messageType = 'status';
+          } else {
+            outcomeMsg = `🚫 TRANSACTION BLOCKED: Approval of ${approvalAmount} to ${shortSpender} denied. This exceeds your total balance or handles unlimited permissions. Transaction secured.`;
+            messageType = 'error';
+          }
+        } else {
+          outcomeMsg = `✅ TRANSACTION CLEARED: Approval of ${approvalAmount} to ${shortSpender} authorized. Balance impact: -${balanceImpact} USDT (${balanceAfter} USDT remaining). This is within safe limits (under 50%).`;
+          messageType = 'success';
+        }
 
-        addMessage('system', outcomeMsg, 'success');
+        addMessage('system', outcomeMsg, messageType);
 
         // AUTO-EXECUTE: If transaction is ALLOWED, execute it on Monad automatically
         if (judgment === 'ALLOW' && finalData.tx_request && account) {
@@ -259,6 +273,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           addMessage('system', '⚠️ Wallet not connected. Transaction approved but not executed on-chain.', 'error');
         }
       } else {
+<<<<<<< HEAD
         console.log('[pollResult] Monitor Mode - Creating alert');
         await apiCall('/alerts', {
           method: 'POST',
@@ -269,6 +284,8 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
           })
         });
 
+=======
+>>>>>>> 63118a6 (issue solve)
         // Dynamic monitor mode message
         const monitorMsg = judgment === 'DENY'
           ? `⚠️ MONITOR ALERT: Approval of ${approvalAmount} to ${shortSpender} flagged as high-risk. ${hasRisks ? `Risks: ${riskFlags.join(', ')}` : 'Security concerns detected'}. Potential loss: ${balanceImpact} USDT. Transaction logged but not blocked (Monitor Mode).`
@@ -384,7 +401,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
                   </div>
                   <div>
                     <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">Authorization Required</h4>
-                    <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed">{m.content}</p>
+                    <p className="text-[10px] sm:text-xs text-slate-400 font-medium leading-relaxed break-all">{m.content}</p>
                   </div>
                 </div>
                 <button
@@ -402,7 +419,7 @@ export default function ChatWindow({ onNewRun, onStreamUpdate }: ChatWindowProps
                   <span className="text-[8px] sm:text-[9px] text-slate-500 font-black uppercase tracking-widest">NoahAI_Response</span>
                 </div>
                 <div
-                  className={`px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl sm:rounded-3xl rounded-tl-none text-xs sm:text-sm font-medium border ${m.type === 'error'
+                  className={`px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl sm:rounded-3xl rounded-tl-none text-xs sm:text-sm font-medium border break-all ${m.type === 'error'
                     ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
                     : m.type === 'success'
                       ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300'

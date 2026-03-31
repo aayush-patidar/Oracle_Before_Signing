@@ -299,10 +299,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
             const tx = await signer.sendTransaction({
                 to,
-                value: amountWei,
-                // Gas limit 21000 is standard for ETH transfers.
-                // Using slightly higher to be safe on testnet, but avoid 30000 which might be arbitrary
-                gasLimit: 30000
+                value: amountWei
             });
 
             console.log('⏳ Transaction submitted:', tx.hash);

@@ -198,10 +198,10 @@ export default function OverviewPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-32 bg-gray-800 rounded-lg" />
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="h-24 bg-gray-800 rounded-lg" />
             ))}
@@ -373,7 +373,7 @@ export default function OverviewPage() {
       {/* Recent Alerts */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-white">Recent Security Events</CardTitle>
             <Link href="/enterprise/alerts">
               <Button variant="outline" size="sm">
@@ -386,29 +386,26 @@ export default function OverviewPage() {
           {stats && stats.recentAlerts.length > 0 ? (
             <div className="space-y-4">
               {stats.recentAlerts.map((alert: any, idx: number) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-4 bg-gray-900/50 rounded-2xl border border-white/5 hover:bg-gray-900 transition-colors"
-                >
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className={`mt-1 p-2.5 rounded-lg border flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-900/50 rounded-2xl border border-white/5 hover:bg-gray-900 transition-colors gap-3">
+                  <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                    <div className={`mt-1 p-2.5 rounded-lg border flex-shrink-0 flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
                       alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
                         'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
                       }`}>
                       <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                     </div>
-                    <div>
-                      <p className="text-sm font-black text-gray-200 uppercase tracking-wider mb-1">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-gray-200 uppercase tracking-wider mb-1 break-words">
                         {alert.event_type}
                       </p>
-                      <p className="text-sm text-gray-400 leading-relaxed max-w-xl">{alert.message}</p>
+                      <p className="text-sm text-gray-400 leading-relaxed break-words">{alert.message}</p>
                       <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-                        <Clock className="w-3 h-3" />
+                        <Clock className="w-3 h-3 flex-shrink-0" />
                         {new Date(alert.created_at || alert.createdAt || new Date()).toLocaleString()}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-3 min-w-[120px]">
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-3 sm:min-w-[120px] pl-12 sm:pl-0">
                     <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
                       alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
                         'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'

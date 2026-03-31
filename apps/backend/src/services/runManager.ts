@@ -108,11 +108,12 @@ export class RunManager {
         // Global Enforce only if ALL policies are ENFORCE
         const isGlobalEnforce = policies.length > 0 && policies.every((p: any) => p.mode === 'ENFORCE' && p.enabled);
 
-        if (!isGlobalEnforce && (status === 'DENIED' || status === 'PENDING')) {
+        // SYSTEM OVERRIDE: PENDING transactions (mid-tier) should ALWAYS go to PENDING 
+        // to respect the manual approval requirement, even in Monitor Mode.
+        if (!isGlobalEnforce && status === 'DENIED') {
           console.log(`⚠️ Monitor Mode Active: Flagging transaction ${runId} but NOT blocking.`);
 
           // Create Alert instead of blocking
-          // Schema matches: event_type, severity, message, transaction_id
           await Queries.addAlert({
             severity: 'HIGH',
             event_type: 'MONITOR_MODE_VIOLATION',
@@ -126,7 +127,9 @@ export class RunManager {
 
           // Add a note to judgment for the UI
           (judgment as any).monitor_mode_override = true;
-          (judgment as any).warning = "Transaction violates policies but is allowed in Monitor Mode.";
+        } else if (status === 'PENDING') {
+          // Keep it as PENDING - mid-tier rules are platform-enforced
+          console.log(`⏳ Platform Compliance: Transaction ${runId} put into PENDING state for manual review.`);
         }
       } catch (err) {
         console.error('Failed to apply policy mode logic:', err);
@@ -164,6 +167,8 @@ export class RunManager {
             from_address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', // User wallet
             to_address: simulationResult.txRequest.to,
             function_name: 'approve',
+            data: simulationResult.txRequest.data,
+            value: simulationResult.txRequest.value,
             status: status,
             createdAt: new Date().toISOString(), // Use createdAt (standard)
             created_at: new Date().toISOString(), // Keep created_at for legacy compat

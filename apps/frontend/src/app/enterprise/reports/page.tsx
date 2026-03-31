@@ -88,17 +88,17 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Simulation Reports</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Simulation Reports</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           View detailed simulation results and outcomes
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300">
@@ -223,7 +223,7 @@ export default function ReportsPage() {
 
       {/* Report Detail Modal */}
       {selectedReport && (
-        <Card className="bg-gray-800 border-gray-700 fixed bottom-0 right-0 w-full max-w-2xl h-screen rounded-none border-l">
+        <Card className="bg-gray-800 border-gray-700 fixed bottom-0 right-0 w-full sm:max-w-2xl h-[90vh] sm:h-screen rounded-t-2xl sm:rounded-none border-l">
           <CardHeader className="border-b border-gray-700">
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Report Details</CardTitle>

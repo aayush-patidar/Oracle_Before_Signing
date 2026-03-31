@@ -81,18 +81,18 @@ export default function ContractsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Contract Registry</h1>
-          <p className="text-gray-400">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Contract Registry</h1>
+          <p className="text-sm sm:text-base text-gray-400">
             Manage and monitor smart contracts for security analysis
           </p>
         </div>
         <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Contract
@@ -100,7 +100,7 @@ export default function ContractsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card className="bg-gray-800 border-gray-700">
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-white">{contracts.length}</div>
@@ -139,66 +139,68 @@ export default function ContractsPage() {
           <CardTitle className="text-white">Registered Contracts</CardTitle>
           <CardDescription>All smart contracts being monitored</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-700">
-                <TableHead className="text-gray-400">Name</TableHead>
-                <TableHead className="text-gray-400">Address</TableHead>
-                <TableHead className="text-gray-400">Type</TableHead>
-                <TableHead className="text-gray-400">Risk Level</TableHead>
-                <TableHead className="text-gray-400">Added</TableHead>
-                <TableHead className="text-gray-400 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contracts.map((contract) => (
-                <TableRow key={contract.id} className="border-gray-700">
-                  <TableCell className="font-medium text-white">{contract.name}</TableCell>
-                  <TableCell className="font-mono text-sm text-gray-300">
-                    {contract.address.slice(0, 6)}...{contract.address.slice(-4)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{contract.type}</Badge>
-                  </TableCell>
-                  <TableCell>{getRiskBadge(contract.riskLevel)}</TableCell>
-                  <TableCell className="text-gray-400 text-sm">
-                    {new Date(contract.addedAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyAddress(contract.address)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(`https://etherscan.io/address/${contract.address}`, '_blank')}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                      {permissions.delete && (
+        <CardContent className="px-2 sm:px-6">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-gray-700">
+                  <TableHead className="text-gray-400">Name</TableHead>
+                  <TableHead className="text-gray-400">Address</TableHead>
+                  <TableHead className="text-gray-400">Type</TableHead>
+                  <TableHead className="text-gray-400">Risk Level</TableHead>
+                  <TableHead className="text-gray-400">Added</TableHead>
+                  <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contracts.map((contract) => (
+                  <TableRow key={contract.id} className="border-gray-700">
+                    <TableCell className="font-medium text-white">{contract.name}</TableCell>
+                    <TableCell className="font-mono text-sm text-gray-300">
+                      {contract.address.slice(0, 6)}...{contract.address.slice(-4)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{contract.type}</Badge>
+                    </TableCell>
+                    <TableCell>{getRiskBadge(contract.riskLevel)}</TableCell>
+                    <TableCell className="text-gray-400 text-sm">
+                      {new Date(contract.addedAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(contract.id)}
-                          className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                          onClick={() => copyAddress(contract.address)}
+                          className="h-8 w-8 p-0"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Copy className="w-4 h-4" />
                         </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(`https://etherscan.io/address/${contract.address}`, '_blank')}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                        {permissions.delete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(contract.id)}
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -23,12 +23,17 @@ interface Transaction {
   status: string;
   created_at: string;
   risk_level?: string;
+  data?: string;
+  value?: string;
 }
 
 import { useRouter } from 'next/navigation';
+import { useWeb3 } from '@/context/Web3Context';
+import { toast } from 'sonner';
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const { executeTransaction, isConnected } = useWeb3();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
@@ -57,24 +62,63 @@ export default function TransactionsPage() {
     setProcessing(true);
 
     try {
-      // Use _id if available (MongoDB), otherwise id or intent_id
+      // 1. If approving a PENDING transaction, execute it on-chain first
+      let executionResult = null;
+      if (status === 'ALLOWED' && selectedTx.status === 'PENDING') {
+        if (!selectedTx.data) {
+          toast.error('Transaction data is missing. Cannot execute on-chain.');
+          setProcessing(false);
+          return;
+        }
+
+        if (!isConnected) {
+          toast.error('Wallet not connected. Please connect to approve.');
+          setProcessing(false);
+          return;
+        }
+
+        toast.info('Initiating on-chain execution...');
+        try {
+          executionResult = await executeTransaction({
+            to: selectedTx.to_address,
+            data: selectedTx.data,
+            value: selectedTx.value || '0'
+          });
+          toast.success('Transaction executed on-chain successfully!');
+        } catch (execError: any) {
+          console.error('Execution failed:', execError);
+          toast.error(`Execution failed: ${execError.message || 'Verification rejected/failed'}`);
+          setProcessing(false);
+          return;
+        }
+      }
+
+      // 2. Update status in database
       const txId = (selectedTx as any)._id || selectedTx.id || selectedTx.intent_id;
+      const updateData: any = { status };
+      
+      if (executionResult) {
+        updateData.tx_hash = executionResult.hash;
+        updateData.on_chain = true;
+        updateData.executed_at = new Date().toISOString();
+      }
 
       const response = await fetch(`/api/transactions/${txId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify(updateData)
       });
 
       if (response.ok) {
-        // Update local state and close drawer
+        toast.success(`Transaction status updated to ${status}`);
         await fetchTransactions();
         setSelectedTx(null);
       } else {
-        console.error('Failed to update transaction status');
+        toast.error('Failed to update transaction status in database');
       }
-    } catch (error) {
-      console.error('Error updating transaction:', error);
+    } catch (error: any) {
+      console.error('Operation failed:', error);
+      toast.error(`Error: ${error.message || 'Operation failed'}`);
     } finally {
       setProcessing(false);
     }
@@ -107,27 +151,27 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Transaction Queue</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Transaction Queue</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Review, simulate, and approve blockchain transactions
         </p>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <Button variant="outline" className="border-gray-700">
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" className="border-gray-700">
           All Transactions
         </Button>
-        <Button variant="ghost" className="text-gray-400">
+        <Button size="sm" variant="ghost" className="text-gray-400">
           Pending ({transactions.filter(t => t.status === 'PENDING').length})
         </Button>
-        <Button variant="ghost" className="text-gray-400">
+        <Button size="sm" variant="ghost" className="text-gray-400">
           Allowed ({transactions.filter(t => t.status === 'ALLOWED').length})
         </Button>
-        <Button variant="ghost" className="text-gray-400">
+        <Button size="sm" variant="ghost" className="text-gray-400">
           Denied ({transactions.filter(t => t.status === 'DENIED').length})
         </Button>
       </div>
@@ -214,7 +258,7 @@ export default function TransactionsPage() {
 
       {/* Transaction Detail Drawer */}
       {selectedTx && (
-        <Card className="bg-gray-800 border-gray-700 fixed bottom-0 right-0 w-96 h-screen rounded-none border-l shadow-2xl z-50">
+        <Card className="bg-gray-800 border-gray-700 fixed bottom-0 right-0 w-full sm:w-96 h-[85vh] sm:h-screen rounded-t-2xl sm:rounded-none border-l shadow-2xl z-50">
           <CardHeader className="border-b border-gray-700">
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Transaction Details</CardTitle>

@@ -121,18 +121,18 @@ export default function PoliciesPage() {
   };
 
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-500">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-white tracking-tight">Security Policies</h1>
-          <p className="text-gray-400 max-w-2xl">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Security Policies</h1>
+          <p className="text-sm sm:text-base text-gray-400 max-w-2xl">
             Configure transaction guardrails to prevent malicious activity in real-time.
           </p>
         </div>
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 shadow-lg shadow-blue-900/40 gap-2 border-none"
+          className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 shadow-lg shadow-blue-900/40 gap-2 border-none flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Create Policy
@@ -150,7 +150,7 @@ export default function PoliciesPage() {
           <CardDescription>Status of the system-wide security enforcement</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
             <div className={`p-4 rounded-xl border transition-all ${policyMode === 'ENFORCE'
               ? 'bg-green-500/5 border-green-500/30'
               : 'bg-gray-900/50 border-gray-800 opacity-60'
@@ -224,66 +224,68 @@ export default function PoliciesPage() {
               ))}
             </div>
           ) : policies.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-gray-700 bg-gray-900/50 hover:bg-transparent">
-                  <TableHead className="w-[300px]">Policy Details</TableHead>
-                  <TableHead>Protection Type</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Control</TableHead>
-                  <TableHead className="text-right pr-6">Management</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {policies.map((policy) => (
-                  <TableRow key={policy._id} className="border-gray-700 hover:bg-gray-700/30 group">
-                    <TableCell>
-                      <div className="py-2">
-                        <p className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight text-sm">
-                          {policy.name}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{policy.description}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-gray-900/50 border-gray-700 text-gray-400 font-mono text-[10px]">
-                        {policy.rule_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={`${getSeverityColor(policy.severity)} text-[10px] font-bold`}>
-                        {policy.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => togglePolicy(policy)}
-                        className={`h-8 font-bold text-[10px] ${policy.enabled ? 'text-green-400 bg-green-400/5' : 'text-gray-500 bg-gray-500/5'}`}
-                      >
-                        {policy.enabled ? '✓ ACTIVE' : '✕ OFF'}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-400 hover:bg-blue-400/10">
-                          <Settings2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deletePolicy(policy._id)}
-                          className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-700 bg-gray-900/50 hover:bg-transparent">
+                    <TableHead className="w-[300px]">Policy Details</TableHead>
+                    <TableHead>Protection Type</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Control</TableHead>
+                    <TableHead className="text-right pr-6">Management</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {policies.map((policy) => (
+                    <TableRow key={policy._id} className="border-gray-700 hover:bg-gray-700/30 group">
+                      <TableCell>
+                        <div className="py-2">
+                          <p className="font-bold text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight text-sm">
+                            {policy.name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">{policy.description}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-gray-900/50 border-gray-700 text-gray-400 font-mono text-[10px]">
+                          {policy.rule_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getSeverityColor(policy.severity)} text-[10px] font-bold`}>
+                          {policy.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => togglePolicy(policy)}
+                          className={`h-8 font-bold text-[10px] ${policy.enabled ? 'text-green-400 bg-green-400/5' : 'text-gray-500 bg-gray-500/5'}`}
+                        >
+                          {policy.enabled ? '✓ ACTIVE' : '✕ OFF'}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-400 hover:bg-blue-400/10">
+                            <Settings2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deletePolicy(policy._id)}
+                            className="h-8 w-8 p-0 text-red-500 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 bg-gray-900/20">
               <Shield className="w-16 h-16 text-gray-800 mb-4" />
@@ -301,7 +303,7 @@ export default function PoliciesPage() {
       </Card>
 
       {/* Preset Patterns Section */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border border-gray-700 shadow-lg relative group overflow-hidden">
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-all" />
           <AlertTriangle className="w-10 h-10 text-red-500 mb-4" />

@@ -271,6 +271,7 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+<<<<<<< HEAD
   fastify.get('/api/transactions', async (request, reply) => {
     try {
       const limit = parseInt((request.query as any).limit) || 50;
@@ -298,21 +299,26 @@ export const enterpriseRoutes: FastifyPluginAsync = async (fastify) => {
 
 
   fastify.patch<{ Params: { id: string }; Body: { status: string } }>('/api/transactions/:id', async (request, reply) => {
+=======
+  fastify.patch<{ Params: { id: string }; Body: any }>('/api/transactions/:id', async (request, reply) => {
+>>>>>>> 63118a6 (issue solve)
     try {
-      const { status } = request.body;
-      if (!['ALLOWED', 'DENIED', 'PENDING'].includes(status)) {
+      const updates = request.body;
+      
+      // Basic status validation if provided
+      if (updates.status && !['ALLOWED', 'DENIED', 'PENDING', 'SIMULATING'].includes(updates.status)) {
         return reply.status(400).send({ error: 'Invalid status' });
       }
 
-      const updated = await Queries.updateTransaction(request.params.id, { status });
+      const updated = await Queries.updateTransaction(request.params.id, updates);
 
       // Log audit
-      if (updated) {
+      if (updated && updates.status) {
         await Queries.addAuditLog({
           actor: 'admin', // In prod: get from auth
-          action: `TRANSACTION_${status}`,
-          tx_hash: (updated as any).intent_id,
-          decision: status
+          action: `TRANSACTION_${updates.status}`,
+          tx_hash: (updated as any).tx_hash || (updated as any).intent_id,
+          decision: updates.status
         });
       }
 

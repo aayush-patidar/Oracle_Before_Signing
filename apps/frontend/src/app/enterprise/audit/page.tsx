@@ -80,17 +80,17 @@ export default function AuditLogsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Audit Logs</h1>
-          <p className="text-gray-400">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Audit Logs</h1>
+          <p className="text-sm sm:text-base text-gray-400">
             Immutable record of all security decisions and actions
           </p>
         </div>
         <Button
-          className="bg-blue-600 hover:bg-blue-700 gap-2"
+          className="bg-blue-600 hover:bg-blue-700 gap-2 flex-shrink-0"
           onClick={exportLogs}
         >
           <Download className="w-4 h-4" />
@@ -99,7 +99,7 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300">

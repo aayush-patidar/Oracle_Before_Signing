@@ -87,17 +87,17 @@ export default function AlertsPage() {
     : alerts.filter(a => a.severity === filterSeverity);
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Security Alerts</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Security Alerts</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Real-time security events and policy violations
         </p>
       </div>
 
       {/* Alert Summary */}
-      <div className="grid grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-300">
@@ -116,7 +116,7 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-400">
+            <div className="text-2xl font-bold text-rose-500">
               {alerts.filter(a => a.severity === 'CRITICAL').length}
             </div>
           </CardContent>
@@ -129,7 +129,7 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-400">
+            <div className="text-2xl font-bold text-amber-500">
               {alerts.filter(a => a.severity === 'HIGH').length}
             </div>
           </CardContent>
@@ -142,7 +142,7 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-400">
+            <div className="text-2xl font-bold text-indigo-400">
               {alerts.filter(a => a.severity === 'MEDIUM').length}
             </div>
           </CardContent>
@@ -155,7 +155,7 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-400">
+            <div className="text-2xl font-bold text-emerald-400">
               {alerts.filter(a => a.acknowledged).length}
             </div>
           </CardContent>
@@ -163,10 +163,11 @@ export default function AlertsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-2">
         {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((severity) => (
           <Button
             key={severity}
+            size="sm"
             variant={filterSeverity === severity ? 'default' : 'outline'}
             className={filterSeverity === severity ? '' : 'border-gray-700 text-gray-400'}
             onClick={() => setFilterSeverity(severity)}
@@ -185,60 +186,36 @@ export default function AlertsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-16 bg-gray-700 rounded animate-pulse"
-                />
-              ))}
-            </div>
-          ) : filteredAlerts.length > 0 ? (
+          {filteredAlerts.length > 0 ? (
             <div className="space-y-4">
               {filteredAlerts.map((alert) => (
                 <div
                   key={alert.id}
                   className={`relative overflow-hidden border border-white/5 bg-[#0b1222]/50 p-6 rounded-[2rem] transition-all hover:bg-[#0b1222]/80 group ${alert.acknowledged ? 'opacity-60' : ''}`}
                 >
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className={`mt-1 p-3 rounded-xl border flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-start gap-3 sm:gap-4 flex-1">
+                      <div className={`mt-1 p-2.5 rounded-lg border flex-shrink-0 flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
                         alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
-                          alert.severity === 'MEDIUM' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
-                            'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                          'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
                         }`}>
                         {getSeverityIcon(alert.severity)}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-black text-white uppercase tracking-wider text-sm">
-                            {alert.event_type}
-                          </h3>
-                          {!alert.acknowledged && (
-                            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                          )}
-                        </div>
-                        <p className="text-slate-400 text-sm font-medium leading-relaxed">{alert.message}</p>
-                        <div className="flex items-center gap-4 mt-3">
-                          <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                            <Clock className="w-3 h-3" />
-                            {new Date(alert.created_at || alert.createdAt || new Date().toISOString()).toLocaleString()}
-                          </div>
-                          {alert.transaction_id && (
-                            <div className="text-[10px] text-blue-500/50 font-mono font-bold">
-                              TX: {alert.transaction_id.substring(0, 12)}...
-                            </div>
-                          )}
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-gray-200 uppercase tracking-wider mb-1 break-words">
+                          {alert.event_type}
+                        </p>
+                        <p className="text-sm text-gray-400 leading-relaxed break-words">{alert.message}</p>
+                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
+                          <Clock className="w-3 h-3 flex-shrink-0" />
+                          {new Date(alert.created_at || alert.createdAt || new Date()).toLocaleString()}
+                        </p>
                       </div>
                     </div>
-
-                    <div className="flex flex-col items-end gap-3 min-w-[140px]">
-                      <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 sm:gap-3 sm:min-w-[120px] pl-12 sm:pl-0">
+                      <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border flex-shrink-0 ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' :
                         alert.severity === 'HIGH' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
-                          alert.severity === 'MEDIUM' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
-                            'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                          'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
                         }`}>
                         {alert.severity}
                       </div>
@@ -246,7 +223,7 @@ export default function AlertsPage() {
                       {!alert.acknowledged ? (
                         <button
                           onClick={() => handleAcknowledge(alert.id || (alert as any)._id)}
-                          className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-[11px] rounded-xl transition-all shadow-[0_10px_20px_rgba(37,99,235,0.2)] active:scale-95 flex items-center justify-center gap-2"
+                          className="py-2 px-4 sm:w-full sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-[11px] rounded-xl transition-all shadow-[0_10px_20px_rgba(37,99,235,0.2)] active:scale-95 flex items-center justify-center gap-2"
                         >
                           Acknowledge
                         </button>
